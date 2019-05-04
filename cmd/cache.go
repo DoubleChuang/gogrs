@@ -56,6 +56,7 @@ var cacheFlushAllCmd = &cobra.Command{
 	Long:  `清除所有快取`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var hCache = utils.NewHTTPCache(utils.GetOSRamdiskPath(""), "utf8")
+
 		outputNote("Clear Cache:", hCache.Dir, utils.TempFolderName)
 		hCache.FlushAll()
 		outputDone("Done!")

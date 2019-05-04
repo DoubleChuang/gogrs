@@ -101,6 +101,7 @@ func (d *Data) Get() ([][]string, error) {
 	if len(d.UnixMapData[monthDateUnix]) == 0 {
 		var data []byte
 		var err error
+		fmt.Println(d.URL())
 		switch d.exchange {
 		case "tse":
 			data, err = hCache.PostForm(d.URL(), nil)
@@ -120,7 +121,12 @@ func (d *Data) Get() ([][]string, error) {
 				var regdate = regexp.MustCompile(`^\"[0-9/]{7,}`)
 				if d.Name == "" {
 					groups := strings.Split(csvArrayContent[0], " ")
-					d.No, d.Name = groups[1], groups[2]
+					if(len(groups)>=2){
+						d.No, d.Name = groups[1], groups[2]
+					}else{
+						fmt.Println("errorNotEnoughData")
+						return nil, errorNotEnoughData
+					}
 				}
 				var datalist []string
 				for _, v := range csvArrayContent {

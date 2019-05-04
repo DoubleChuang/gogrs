@@ -203,7 +203,8 @@ func (l *Lists) Get(category string) ([][]string, error) {
 
 	data, err := hCache.PostForm(fmt.Sprintf("%s%s", utils.TWSEHOST,
 		fmt.Sprintf(utils.TWSELISTCSV, l.Date.Year(), l.Date.Month(), l.Date.Day(), category)), nil)
-
+	fmt.Printf("%s\n", fmt.Sprintf("%s%s", utils.TWSEHOST,
+		fmt.Sprintf(utils.TWSELISTCSV, l.Date.Year(), l.Date.Month(), l.Date.Day(), category)))
 	if err != nil {
 		return nil, fmt.Errorf(errorNetworkFail.Error(), err)
 	}

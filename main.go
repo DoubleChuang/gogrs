@@ -20,7 +20,9 @@
 
 package main
 
-import "github.com/toomore/gogrs/cmd"
+import (
+	"github.com/toomore/gogrs/cmd"
+)
 
 func main() {
 	cmd.Execute()

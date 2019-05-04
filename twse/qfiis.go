@@ -198,15 +198,21 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-5]
 		datalist = 3
 	case "TWT44U", "TWT38U":
-		csvArrayContent = csvArrayContent[2 : len(csvArrayContent)-7]
+		csvArrayContent = csvArrayContent[2 : len(csvArrayContent)-9]
+		//fmt.Println(csvArrayContent)
 		datalist = 1
 	}
 
 	for i, v := range csvArrayContent {
+
 		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+
+		//fmt.Println(csvArrayContent[i])
 	}
 
 	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+	
+
 		result = make([][]BaseSellBuy, len(csvdata))
 		for i, v := range csvdata {
 			var name, no string
