@@ -194,10 +194,13 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 
 	var csvArrayContent = strings.Split(string(data), "\n")
 	switch t.fund {
+	case "TWT38U":
+		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-9]
+		datalist = 1
 	case "TWT43U":
 		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-5]
 		datalist = 3
-	case "TWT44U", "TWT38U":
+	case "TWT44U":
 		csvArrayContent = csvArrayContent[2 : len(csvArrayContent)-9]
 		//fmt.Println(csvArrayContent)
 		datalist = 1
@@ -227,9 +230,10 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 			}
 			result[i][0].Name = name
 			result[i][0].No = no
-			result[i][0].Buy, _ = strconv.ParseInt(strings.Replace(v[2], ",", "", -1), 10, 64)
-			result[i][0].Sell, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
-			result[i][0].Total, _ = strconv.ParseInt(strings.Replace(v[4], ",", "", -1), 10, 64)
+			result[i][0].Buy, _ = strconv.ParseInt(
+				strings.Replace(v[3], ",", "", -1), 10, 64)
+			result[i][0].Sell, _ = strconv.ParseInt(strings.Replace(v[4], ",", "", -1), 10, 64)
+			result[i][0].Total, _ = strconv.ParseInt(strings.Replace(v[5], ",", "", -1), 10, 64)
 			if datalist > 1 {
 				result[i][1].Name = name
 				result[i][1].No = no

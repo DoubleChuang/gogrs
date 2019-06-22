@@ -81,7 +81,9 @@ func (d *Data) Round() {
 // PlusData will do Round() and Get().
 func (d *Data) PlusData() {
 	d.Round()
-	d.Get()
+	if _,err:=d.Get(); err!=nil{
+		fmt.Println(err)
+	}
 }
 
 func (d *Data) clearCache() {
@@ -170,7 +172,7 @@ func (d Data) GetByTimeMap() map[time.Time]interface{} {
 	}
 	return data
 }
-
+//收集某colsNo行的資料回傳
 func (d Data) getColsList(colsNo int) []string {
 	var result []string
 	result = make([]string, len(d.RawData))
@@ -179,7 +181,7 @@ func (d Data) getColsList(colsNo int) []string {
 	}
 	return result
 }
-
+//將getColsList收集來的資料檢查是否有逗號並轉成Float64
 func (d Data) getColsListFloat64(colsNo int) []float64 {
 	var result []float64
 	result = make([]float64, len(d.RawData))

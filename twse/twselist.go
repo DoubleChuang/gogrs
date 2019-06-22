@@ -203,8 +203,6 @@ func (l *Lists) Get(category string) ([][]string, error) {
 
 	data, err := hCache.PostForm(fmt.Sprintf("%s%s", utils.TWSEHOST,
 		fmt.Sprintf(utils.TWSELISTCSV, l.Date.Year(), l.Date.Month(), l.Date.Day(), category)), nil)
-	fmt.Printf("%s\n", fmt.Sprintf("%s%s", utils.TWSEHOST,
-		fmt.Sprintf(utils.TWSELISTCSV, l.Date.Year(), l.Date.Month(), l.Date.Day(), category)))
 	if err != nil {
 		return nil, fmt.Errorf(errorNetworkFail.Error(), err)
 	}
@@ -251,7 +249,10 @@ func (l *Lists) Get(category string) ([][]string, error) {
 // GetCategoryList 取得分類的股票代碼與名稱列表
 func (l Lists) GetCategoryList(category string) []StockInfo {
 	if _, ok := l.categoryNoList[category]; !ok {
-		l.Get(category)
+		if _, err := l.Get(category); err!=nil {
+			//fmt.Println("GetCategoryList:",err)
+			panic(err)
+		}
 	}
 	return l.categoryNoList[category]
 }
@@ -352,7 +353,10 @@ func (o *OTCLists) Get(category string) ([][]string, error) {
 // GetCategoryList 取得分類的股票代碼與名稱列表
 func (o OTCLists) GetCategoryList(category string) []StockInfo {
 	if _, ok := o.categoryNoList[category]; !ok {
-		o.Get(category)
+		if _, err := o.Get(category); err!=nil {
+            //fmt.Println("GetCategoryList:",err)
+			panic(err)
+        }
 	}
 	return o.categoryNoList[category]
 }

@@ -21,7 +21,13 @@
 package cmd
 
 import (
+	"crypto/md5"
+	"encoding/csv"
+	"errors"
 	"fmt"
+	"io"
+	"os"
+	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -142,42 +148,144 @@ var getAllStockCmd = &cobra.Command{
 	Short: "Get all stock",
 	Long:  `Get All.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		getT38(tradingdays.FindRecentlyOpened(time.Now()))
+		//getT44(tradingdays.FindRecentlyOpened(time.Now()))
 
-		getTWSE("ALLBUT0999", *minDataNum)
-		getOTC("EW", *minDataNum)
+		//getTWSE("ALLBUT0999", *minDataNum)
+		//getTWSE("26", *minDataNum)
+		//getOTC("EW", *minDataNum)
 	},
 }
 
-func getTWSE(category string, minDataNum int) {
-	var t = twse.NewLists(tradingdays.FindRecentlyOpened(time.Now()))
+func debugPrintf(fmt_ string, args ...interface{}) {
+	programCounter, _, line, _ := runtime.Caller(1)
+	fn := runtime.FuncForPC(programCounter)
+	//prefix := fmt.Sprintf("[%s:%s %d] %s", file, fn.Name(), line, fmt_)
+	prefix := fmt.Sprintf("[%s %d] %s", fn.Name(), line, fmt_)
+	fmt.Printf(prefix, args...)
+	fmt.Println()
+}
+func checkFirstDayOfMonth(stock *twse.Data) error {
+	year, month, day := stock.Date.Date()
+	//d := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	s := twse.NewTWSE(stock.No, time.Date(year, month, day, 0, 0, 0, 0, time.UTC))
 
+	hash := md5.New()
+	io.WriteString(hash, s.URL())
+	io.WriteString(hash, "")
+	filehash := fmt.Sprintf("%x", hash.Sum(nil))
+	//debugPrintf("filehash:%s\n", filehash)
+	str := utils.GetOSRamdiskPath("") + utils.TempFolderName + "/" + filehash
+	if err := os.Remove(str); err != nil {
+		debugPrintf("Remove: %s %s\n", str, err)
+		return err
+	} else {
+		fmt.Println("Remove: ", str)
+	}
+	return nil
+
+	//fmt.Println("checkFirstDayOfMonth:", stock.Date, d, stock.Date==d)
+}
+func getTWSE(category string, minDataNum int) error {
+
+	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	t := twse.NewLists(RecentlyOpendtoday)
 	tList := t.GetCategoryList(category)
+	year, month, day := RecentlyOpendtoday.Date()
+
+	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	defer csvFile.Close()
+	if err != nil {
+		debugPrintf("error: %s\n", err)
+		return err
+	}
+	csvWriter := csv.NewWriter(csvFile)
+
 	for _, v := range tList {
-		fmt.Printf("No:%s\n", v.No)
-		stock := twse.NewTWSE(v.No, tradingdays.FindRecentlyOpened(time.Now()))
+		//fmt.Printf("No:%s\n", v.No)
+		stock := twse.NewTWSE(v.No, RecentlyOpendtoday)
+		//checkFirstDayOfMonth(stock)
 		if prepareStock(stock, minDataNum) == true {
-			showStock(stock, minDataNum)
+			if res, err := showStock(stock, minDataNum); err == nil {
+				err = csvWriter.Write([]string{v.No,
+					fmt.Sprintf("%.2f", res.todayRange),
+					fmt.Sprintf("%.2f", res.todayPrice),
+					fmt.Sprintf("%.2f", res.todayGain),
+					fmt.Sprintf("%.2f", res.NDayAvg),
+					fmt.Sprintf("%t", res.overMA)})
+				if err != nil {
+					return err
+				}
+				csvWriter.Flush()
+				err = csvWriter.Error()
+				if err != nil {
+					return err
+				}
+				fmt.Printf("No: %6s Range: %.2f Price: %.2f Gain: %.2f%% NDayAvg:%.2f overMA:%t\n",
+					v.No,
+					res.todayRange,
+					res.todayPrice,
+					res.todayGain,
+					res.NDayAvg,
+					res.overMA,
+				)
+			}
 		} else {
 			fmt.Println("Fail to get enough data")
 		}
 	}
+	return nil
 
 }
 
-func getOTC(category string, minDataNum int) {
-	var otc = twse.NewOTCLists(tradingdays.FindRecentlyOpened(time.Now()))
+func getOTC(category string, minDataNum int) error {
+	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	otc := twse.NewOTCLists(RecentlyOpendtoday)
 
 	oList := otc.GetCategoryList(category)
 
+	year, month, day := RecentlyOpendtoday.Date()
+
+	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	defer csvFile.Close()
+	if err != nil {
+		debugPrintf("error: %s\n", err)
+		return err
+	}
+	csvWriter := csv.NewWriter(csvFile)
+
 	for _, v := range oList {
-		fmt.Printf("No:%s\n", v.No)
-		stock := twse.NewOTC(v.No, tradingdays.FindRecentlyOpened(time.Now()))
+		stock := twse.NewOTC(v.No, RecentlyOpendtoday)
 		if prepareStock(stock, minDataNum) == true {
-			showStock(stock, minDataNum)
+			if res, err := showStock(stock, minDataNum); err == nil {
+				err = csvWriter.Write([]string{v.No,
+					fmt.Sprintf("%.2f", res.todayRange),
+					fmt.Sprintf("%.2f", res.todayPrice),
+					fmt.Sprintf("%.2f", res.todayGain),
+					fmt.Sprintf("%.2f", res.NDayAvg),
+					fmt.Sprintf("%t", res.overMA)})
+				if err != nil {
+					return err
+				}
+				csvWriter.Flush()
+				err = csvWriter.Error()
+				if err != nil {
+					return err
+				}
+				fmt.Printf("No: %6s Range: %.2f Price: %.2f Gain: %.2f%% NDayAvg:%.2f overMA:%t\n",
+					v.No,
+					res.todayRange,
+					res.todayPrice,
+					res.todayGain,
+					res.NDayAvg,
+					res.overMA,
+				)
+			}
 		} else {
 			fmt.Println("Fail to get enough data")
 		}
 	}
+	return nil
 }
 
 var testCmd = &cobra.Command{
@@ -222,29 +330,104 @@ func prepareStock(stock *twse.Data, mindata int) bool {
 	}
 	return result
 }
-func showStock(stock *twse.Data, minDataNum int) {
+
+type resData struct {
+	todayRange float64
+	todayPrice float64
+	todayGain  float64
+	NDayAvg    float64
+	overMA     bool
+}
+
+func showStock(stock *twse.Data, minDataNum int) (*resData, error) {
 	var todayRange float64
 	var todayPrice float64
+	res := new(resData)
 	minData := minDataNum
 	if len(stock.RawData) < minData {
 		fmt.Println(stock.Name, "No Data")
-		return
+		return nil, errors.New("No Data")
 	}
 	rangeList := stock.GetRangeList()
 	priceList := stock.GetPriceList()
 	if len(rangeList) >= minData && len(priceList) >= minData {
 		todayRange = rangeList[len(rangeList)-1]
 		todayPrice = priceList[len(priceList)-1]
+		res.todayRange = todayRange
+		res.todayPrice = todayPrice
+		res.todayGain = todayRange / todayPrice * 100
 
-		fmt.Printf("%.2f%%\n", todayRange/todayPrice*100)
+		//fmt.Printf("%.2f%%\n", todayRange/todayPrice*100)
+	} else {
+		return nil, errors.New("No enough price data")
 	}
 	daysAvg := stock.MA(minData)
 	if len(daysAvg) > 0 {
-		today20MA := daysAvg[len(daysAvg)-1]
-		fmt.Println(today20MA, todayPrice, todayPrice > today20MA)
+		NDayAvg := daysAvg[len(daysAvg)-1]
+		//fmt.Println(NDayAvg, todayPrice, todayPrice > NDayAvg)
+		res.NDayAvg = NDayAvg
+		res.overMA = todayPrice > NDayAvg
+	} else {
+		return nil, errors.New("No enough avg data")
 	}
+	return res, nil
 
 }
+
+//獲取外資與陸資
+type TXXData struct {
+	Buy   int64
+	Sell  int64
+	Total int64
+}
+
+func getT38(date time.Time) (map[string]TXXData, error) {
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+
+	t38 := twse.NewTWT38U(date)
+	//fmt.Println(t38.URL())
+	t38Map := make(map[string]TXXData)
+	if data, err := t38.Get(); err == nil {
+		for _, v := range data {
+			fmt.Printf("No: %s Buy %d Sell %d Total %d\n",
+				v[0].No,
+				v[0].Buy,
+				v[0].Sell,
+				v[0].Total)
+			t38Map[v[0].No] = TXXData{v[0].Buy, v[0].Sell, v[0].Total}
+		}
+
+	} else {
+		fmt.Println("Error: ", err.Error())
+		return nil, err
+	}
+	//fmt.Println(t38Map)
+	return t38Map, nil
+}
+func getT44(date time.Time) (map[string]TXXData, error) {
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+
+	t44 := twse.NewTWT44U(date)
+	fmt.Println(t44.URL())
+	t44Map := make(map[string]TXXData)
+	if data, err := t44.Get(); err == nil {
+		for _, v := range data {
+			fmt.Printf("No: %s Buy %d Sell %d Total %d\n",
+				v[0].No,
+				v[0].Buy,
+				v[0].Sell,
+				v[0].Total)
+			t44Map[v[0].No] = TXXData{v[0].Buy, v[0].Sell, v[0].Total}
+		}
+
+	} else {
+		fmt.Println("Error: ", err.Error())
+		return nil, err
+	}
+	return t44Map, nil
+	//fmt.Println(t44Map)
+}
+
 func showMyAll(stock *twse.Data) {
 	rangeList := stock.GetRangeList()
 	priceList := stock.GetPriceList()
@@ -255,7 +438,7 @@ func showMyAll(stock *twse.Data) {
 	today20MA := daysAvg[len(daysAvg)-1]
 
 	//t86 := &twse.T86{Date: time.Now()}
-	//result := Weight(time.Date(2017, 3, 5, 0, 0, 0, 0, utils.TaipeiTimeZone))a
+	//result := Weight(time.Date(2017, 3, 5, 0, 0, 0, 0, utils.TaipeiTimeZone))
 	//d, _ := time.ParseDuration("-24h")
 	//t38 := twse.NewTWT38U(time.Date(2015, 5, 26, 0, 0, 0, 0, utils.TaipeiTimeZone))
 	/*t38 := twse.NewTWT38U(tradingdays.FindRecentlyOpened(time.Now()))
