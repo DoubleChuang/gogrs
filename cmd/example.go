@@ -148,10 +148,10 @@ var getAllStockCmd = &cobra.Command{
 	Short: "Get all stock",
 	Long:  `Get All.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		getT38(tradingdays.FindRecentlyOpened(time.Now()))
+		//getT38(tradingdays.FindRecentlyOpened(time.Now()))
 		//getT44(tradingdays.FindRecentlyOpened(time.Now()))
 
-		//getTWSE("ALLBUT0999", *minDataNum)
+		getTWSE("ALLBUT0999", *minDataNum)
 		//getTWSE("26", *minDataNum)
 		//getOTC("EW", *minDataNum)
 	},
@@ -201,6 +201,10 @@ func getTWSE(category string, minDataNum int) error {
 	}
 	csvWriter := csv.NewWriter(csvFile)
 
+	t38 ,err := getT38(RecentlyOpendtoday)
+	if err != nil{
+		return err
+	}
 	for _, v := range tList {
 		//fmt.Printf("No:%s\n", v.No)
 		stock := twse.NewTWSE(v.No, RecentlyOpendtoday)
@@ -212,7 +216,8 @@ func getTWSE(category string, minDataNum int) error {
 					fmt.Sprintf("%.2f", res.todayPrice),
 					fmt.Sprintf("%.2f", res.todayGain),
 					fmt.Sprintf("%.2f", res.NDayAvg),
-					fmt.Sprintf("%t", res.overMA)})
+					fmt.Sprintf("%t", res.overMA),
+					fmt.Sprintf("%t", t38[v.No].Total > 0)})
 				if err != nil {
 					return err
 				}
