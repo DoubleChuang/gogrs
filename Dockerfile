@@ -1,7 +1,7 @@
 FROM golang:alpine
 MAINTAINER Toomore Chiang <toomore0929@gmail.com>
 
-WORKDIR /go/src/github.com/toomore/gogrs/
+WORKDIR /go/src/github.com/DoubleChuang/gogrs/
 
 ADD ./LICENSE ./
 ADD ./README.md ./

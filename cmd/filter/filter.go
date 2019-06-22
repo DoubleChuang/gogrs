@@ -2,8 +2,8 @@
 package filter
 
 import (
-	"github.com/toomore/gogrs/twse"
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/twse"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 // CheckGroup for base filter interface.

@@ -1,17 +1,17 @@
-gogrs [![Release](https://img.shields.io/github/release/toomore/gogrs.svg)](https://github.com/toomore/gogrs/releases)
+gogrs [![Release](https://img.shields.io/github/release/toomore/gogrs.svg)](https://github.com/DoubleChuang/gogrs/releases)
 ======
 
-[![GoDoc](https://godoc.org/github.com/toomore/gogrs?status.svg)](https://godoc.org/github.com/toomore/gogrs) [![Coverage Status](https://coveralls.io/repos/toomore/gogrs/badge.svg?branch=master)](https://coveralls.io/r/toomore/gogrs?branch=master) [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/toomore/gogrs/master/LICENSE) [![Build Status](https://travis-ci.org/toomore/gogrs.svg?branch=master)](https://travis-ci.org/toomore/gogrs) [![Go Report Card](https://goreportcard.com/badge/github.com/toomore/gogrs)](https://goreportcard.com/report/github.com/toomore/gogrs)
+[![GoDoc](https://godoc.org/github.com/DoubleChuang/gogrs?status.svg)](https://godoc.org/github.com/DoubleChuang/gogrs) [![Coverage Status](https://coveralls.io/repos/toomore/gogrs/badge.svg?branch=master)](https://coveralls.io/r/toomore/gogrs?branch=master) [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/toomore/gogrs/master/LICENSE) [![Build Status](https://travis-ci.org/toomore/gogrs.svg?branch=master)](https://travis-ci.org/toomore/gogrs) [![Go Report Card](https://goreportcard.com/badge/github.com/DoubleChuang/gogrs)](https://goreportcard.com/report/github.com/DoubleChuang/gogrs)
 
 gogrs is a tool for fetching data from Taiwan Stock Exchange(TWSE) and dockerizing. gogrs now is still in development. I will try my best to speed up to completed the same function with [grs](https://github.com/toomore/grs) (Python). gogrs 是擷取台灣上市股票股價資訊工具，目前還在大量的開發中。原始工具是用 [grs](https://github.com/toomore/grs)（Python 套件），目標是將基本功能用 go 來實作。
 
 Packages
 ---------
 
-1. realtime - [擷取盤中個股、指數即時股價資訊](https://godoc.org/github.com/toomore/gogrs/realtime) **（使用太過頻繁會有被擋掉的風險，目前無完善的解決辦法）**
-2. twse - [擷取台灣股市上市/上櫃股票資訊、上市/上櫃類股清單、外資及陸資持股比率前二十名彙總表、 三大法人買賣金額統計表、三大法人買賣超日報、自營商、投信、外資及陸資買賣超彙總表](https://godoc.org/github.com/toomore/gogrs/twse)
-3. tradingdays - [股市開休市判斷（支援非國定假日：颱風假）與當日區間判斷（盤中、盤後、盤後盤）](https://godoc.org/github.com/toomore/gogrs/tradingdays)
-4. utils - [套件所需的公用工具（總和、平均、序列差、持續天數、民國日期解析、簡單亂數、標準差、簡單 net/http 快取）](https://godoc.org/github.com/toomore/gogrs/utils)
+1. realtime - [擷取盤中個股、指數即時股價資訊](https://godoc.org/github.com/DoubleChuang/gogrs/realtime) **（使用太過頻繁會有被擋掉的風險，目前無完善的解決辦法）**
+2. twse - [擷取台灣股市上市/上櫃股票資訊、上市/上櫃類股清單、外資及陸資持股比率前二十名彙總表、 三大法人買賣金額統計表、三大法人買賣超日報、自營商、投信、外資及陸資買賣超彙總表](https://godoc.org/github.com/DoubleChuang/gogrs/twse)
+3. tradingdays - [股市開休市判斷（支援非國定假日：颱風假）與當日區間判斷（盤中、盤後、盤後盤）](https://godoc.org/github.com/DoubleChuang/gogrs/tradingdays)
+4. utils - [套件所需的公用工具（總和、平均、序列差、持續天數、民國日期解析、簡單亂數、標準差、簡單 net/http 快取）](https://godoc.org/github.com/DoubleChuang/gogrs/utils)
 
 Cmd
 ----

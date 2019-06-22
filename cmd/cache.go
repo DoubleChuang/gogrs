@@ -25,7 +25,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 func outputNote(note ...interface{}) {

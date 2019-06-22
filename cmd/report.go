@@ -22,9 +22,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/toomore/gogrs/cmd/filter"
-	"github.com/toomore/gogrs/tradingdays"
-	"github.com/toomore/gogrs/twse"
+	"github.com/DoubleChuang/gogrs/cmd/filter"
+	"github.com/DoubleChuang/gogrs/tradingdays"
+	"github.com/DoubleChuang/gogrs/twse"
 )
 
 var (

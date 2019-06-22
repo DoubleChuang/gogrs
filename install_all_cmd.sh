@@ -1,2 +1,2 @@
 #!/bin/bash
-go install -v -a github.com/toomore/gogrs
+go install -v -a github.com/DoubleChuang/gogrs

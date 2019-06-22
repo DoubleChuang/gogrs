@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 // IsOpen 判斷是否為開休日

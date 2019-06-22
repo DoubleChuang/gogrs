@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/toomore/gogrs/tradingdays"
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/tradingdays"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 func TestStockRealTime(t *testing.T) {

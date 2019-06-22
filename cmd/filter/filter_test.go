@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/toomore/gogrs/twse"
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/twse"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 var stocklist = []*twse.Data{

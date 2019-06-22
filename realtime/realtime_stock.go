@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 type msgArray []map[string]string

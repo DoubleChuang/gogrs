@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 func assertType(t *testing.T, t1 interface{}, t2 interface{}) {

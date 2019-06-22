@@ -21,7 +21,7 @@
 package main
 
 import (
-	"github.com/toomore/gogrs/cmd"
+	"github.com/DoubleChuang/gogrs/cmd"
 )
 
 func main() {

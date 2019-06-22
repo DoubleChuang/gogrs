@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 // TWSECLASS is a class list of TWSE.

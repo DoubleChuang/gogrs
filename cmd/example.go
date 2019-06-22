@@ -31,9 +31,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/toomore/gogrs/tradingdays"
-	"github.com/toomore/gogrs/twse"
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/tradingdays"
+	"github.com/DoubleChuang/gogrs/twse"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 var minDataNum *int

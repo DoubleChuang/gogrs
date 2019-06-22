@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 // Weight is TWSE Weight

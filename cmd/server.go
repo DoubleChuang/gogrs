@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/toomore/gogrs/tradingdays"
+	"github.com/DoubleChuang/gogrs/tradingdays"
 )
 
 // Log is show viwer log.
@@ -46,7 +46,7 @@ func Home(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte("查詢台灣股市是否開市<br>"))
 	w.Write([]byte(fmt.Sprintf("<a href=\"/open?q=%d\">範例</a><br>", time.Now().Unix())))
-	w.Write([]byte("[<a href=\"https://godoc.org/github.com/toomore/gogrs/tradingdays\">Docs</a>] [<a href=\"https://github.com/toomore/gogrs/blob/master/cmd/tradingdays_server/main.go\">github</a>]<br>"))
+	w.Write([]byte("[<a href=\"https://godoc.org/github.com/DoubleChuang/gogrs/tradingdays\">Docs</a>] [<a href=\"https://github.com/DoubleChuang/gogrs/blob/master/cmd/tradingdays_server/main.go\">github</a>]<br>"))
 
 	Log(req)
 }

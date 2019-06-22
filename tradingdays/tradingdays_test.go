@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/toomore/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 func ExampleIsOpen() {
