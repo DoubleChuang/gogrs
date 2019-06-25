@@ -21,7 +21,7 @@ import (
 const TempFolderName = ".gogrscache"
 
 //與TWSE訪問需間隔的時間差
-const TWSEDURTION= 3
+const TWSEDURTION= 4
 //與OTC訪問需間隔的時間差
 const OTCDURTION = 0
 //上一次造訪TWSE時間
@@ -102,7 +102,7 @@ func (hc HTTPCache) Get(url string, rand bool) ([]byte, error) {
 		err     error
 	)
 
-	//fmt.Println("file:",filehash)
+	fmt.Printf("file:%s%s/%s\n",GetOSRamdiskPath(""),TempFolderName, filehash)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime( whereUrl(url) )
 		return hc.saveFile(url, filehash, rand, nil)
@@ -122,6 +122,8 @@ func (hc HTTPCache) PostForm(url string, data url.Values) ([]byte, error) {
 	)
 
 	filehash := fmt.Sprintf("%x", hash.Sum(nil))
+	
+	fmt.Printf("file:%s%s/%s\n",GetOSRamdiskPath(""),TempFolderName, filehash)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime( whereUrl(url) )
 

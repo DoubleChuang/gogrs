@@ -187,7 +187,7 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 		err      error
 		result   [][]BaseSellBuy
 	)
-
+	fmt.Println(t.URL())
 	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
 		return nil, err
 	}
@@ -195,6 +195,9 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 	var csvArrayContent = strings.Split(string(data), "\n")
 	switch t.fund {
 	case "TWT38U":
+		if len(csvArrayContent) < 9{
+			return nil, fmt.Errorf("File No Data\n")
+		}
 		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-9]
 		datalist = 1
 	case "TWT43U":

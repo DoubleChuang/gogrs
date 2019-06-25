@@ -37,6 +37,9 @@ import (
 )
 
 var minDataNum *int
+var minDataNumTWSE *int
+var minDataNumTPEX *int
+
 var OTCCLASS = map[string]string{
 	"02": "食品工業",
 	"03": "塑膠工業",
@@ -157,6 +160,43 @@ var getAllStockCmd = &cobra.Command{
 	},
 }
 
+var getTWSECmd = &cobra.Command{
+	Use:   "gtw",
+	Short: "Get ALL TWSE",
+	Long:  `Get All Stock of TWSE`,
+	Run: func(cmd *cobra.Command, args []string) {
+		getTWSE("ALLBUT0999", *minDataNumTWSE)
+	},
+}
+
+var getTPEXCmd = &cobra.Command{
+	Use:   "gtp",
+	Short: "Get ALL TPEX",
+	Long:  `Get All Stock of TPEX`,
+
+	Run: func(cmd *cobra.Command, args []string) {
+		getOTC("EW", *minDataNumTPEX)
+	},
+}
+var getT38Cmd = &cobra.Command{
+	Use:   "gf",
+	Short: "Get All Foreign Investor",
+	Long:  `Get All Stock of Foreign Investor`,
+
+	Run: func(cmd *cobra.Command, args []string) {
+		getT38(tradingdays.FindRecentlyOpened(time.Now()))
+	},
+}
+var getT44Cmd = &cobra.Command{
+	Use:   "gt",
+	Short: "Get All Investment Trust",
+	Long:  `Get All Stock of Investment Trust`,
+
+	Run: func(cmd *cobra.Command, args []string) {
+		getT44(tradingdays.FindRecentlyOpened(time.Now()))
+	},
+}
+
 func debugPrintf(fmt_ string, args ...interface{}) {
 	programCounter, _, line, _ := runtime.Caller(1)
 	fn := runtime.FuncForPC(programCounter)
@@ -201,7 +241,7 @@ func getTWSE(category string, minDataNum int) error {
 	}
 	csvWriter := csv.NewWriter(csvFile)
 
-	t38 ,err := getT38(RecentlyOpendtoday)
+	//t38 ,err := getT38(RecentlyOpendtoday)
 	if err != nil{
 		return err
 	}
@@ -209,15 +249,15 @@ func getTWSE(category string, minDataNum int) error {
 		//fmt.Printf("No:%s\n", v.No)
 		stock := twse.NewTWSE(v.No, RecentlyOpendtoday)
 		//checkFirstDayOfMonth(stock)
-		if prepareStock(stock, minDataNum) == true {
+		if err := prepareStock(stock, minDataNum); err == nil {
 			if res, err := showStock(stock, minDataNum); err == nil {
 				err = csvWriter.Write([]string{v.No,
 					fmt.Sprintf("%.2f", res.todayRange),
 					fmt.Sprintf("%.2f", res.todayPrice),
 					fmt.Sprintf("%.2f", res.todayGain),
 					fmt.Sprintf("%.2f", res.NDayAvg),
-					fmt.Sprintf("%t", res.overMA),
-					fmt.Sprintf("%t", t38[v.No].Total > 0)})
+					fmt.Sprintf("%t", res.overMA)})
+					//fmt.Sprintf("%t", t38[v.No].Total > 0)})
 				if err != nil {
 					return err
 				}
@@ -236,7 +276,7 @@ func getTWSE(category string, minDataNum int) error {
 				)
 			}
 		} else {
-			fmt.Println("Fail to get enough data")
+			fmt.Println(err)
 		}
 	}
 	return nil
@@ -261,7 +301,7 @@ func getOTC(category string, minDataNum int) error {
 
 	for _, v := range oList {
 		stock := twse.NewOTC(v.No, RecentlyOpendtoday)
-		if prepareStock(stock, minDataNum) == true {
+		if err := prepareStock(stock, minDataNum); err == nil {
 			if res, err := showStock(stock, minDataNum); err == nil {
 				err = csvWriter.Write([]string{v.No,
 					fmt.Sprintf("%.2f", res.todayRange),
@@ -287,7 +327,7 @@ func getOTC(category string, minDataNum int) error {
 				)
 			}
 		} else {
-			fmt.Println("Fail to get enough data")
+			fmt.Println(err)
 		}
 	}
 	return nil
@@ -307,11 +347,10 @@ var testCmd = &cobra.Command{
 	},
 }
 
-func prepareStock(stock *twse.Data, mindata int) bool {
+func prepareStock(stock *twse.Data, mindata int) error {
 
-	var result bool = false
 	if _, err := stock.Get(); err != nil {
-		return result
+		return err
 	}
 
 	if stock.Len() < mindata {
@@ -319,7 +358,6 @@ func prepareStock(stock *twse.Data, mindata int) bool {
 		for {
 			stock.PlusData()
 			if stock.Len() > mindata {
-				result = true
 				break
 			}
 			if stock.Len() == start {
@@ -328,12 +366,10 @@ func prepareStock(stock *twse.Data, mindata int) bool {
 			start = stock.Len()
 		}
 		if stock.Len() < mindata {
-			result = false
+			return errors.New("Can't prepare enough data, please check file has data or remove cache file")
 		}
-	} else {
-		result = true
 	}
-	return result
+	return nil
 }
 
 type resData struct {
@@ -403,7 +439,7 @@ func getT38(date time.Time) (map[string]TXXData, error) {
 		}
 
 	} else {
-		fmt.Println("Error: ", err.Error())
+		debugPrintf("Error: %s\n", err.Error())
 		return nil, err
 	}
 	//fmt.Println(t38Map)
@@ -476,9 +512,17 @@ func showAll(stock *twse.Data) {
 
 func init() {
 	minDataNum = getAllStockCmd.Flags().IntP("num", "n", 3, "min date num")
+
+	minDataNumTWSE = getTWSECmd.Flags().IntP("num", "n", 3, "min date num")
+	minDataNumTPEX = getTPEXCmd.Flags().IntP("num", "n", 3, "min date num")
+	//minDataNum = RootCmd.Flags().IntP("num", "n", 3, "min date num")
 	RootCmd.AddCommand(exampleCmd)
 	RootCmd.AddCommand(testCmd)
 	RootCmd.AddCommand(getAllStockCmd)
+	RootCmd.AddCommand(getTWSECmd)
+	RootCmd.AddCommand(getTPEXCmd)
+	RootCmd.AddCommand(getT38Cmd)
+	RootCmd.AddCommand(getT44Cmd)
 
 	// Here you will define your flags and configuration settings.
 
