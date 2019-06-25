@@ -30,10 +30,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/DoubleChuang/gogrs/tradingdays"
 	"github.com/DoubleChuang/gogrs/twse"
 	"github.com/DoubleChuang/gogrs/utils"
+	"github.com/spf13/cobra"
 )
 
 var minDataNum *int
@@ -242,7 +242,7 @@ func getTWSE(category string, minDataNum int) error {
 	csvWriter := csv.NewWriter(csvFile)
 
 	//t38 ,err := getT38(RecentlyOpendtoday)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	for _, v := range tList {
@@ -257,7 +257,7 @@ func getTWSE(category string, minDataNum int) error {
 					fmt.Sprintf("%.2f", res.todayGain),
 					fmt.Sprintf("%.2f", res.NDayAvg),
 					fmt.Sprintf("%t", res.overMA)})
-					//fmt.Sprintf("%t", t38[v.No].Total > 0)})
+				//fmt.Sprintf("%t", t38[v.No].Total > 0)})
 				if err != nil {
 					return err
 				}
@@ -440,7 +440,10 @@ func getT38(date time.Time) (map[string]TXXData, error) {
 
 	} else {
 		debugPrintf("Error: %s\n", err.Error())
-		return nil, err
+
+		if t38Map, err = getT38(date.AddDate(0, 0, -1)); err != nil {
+			return nil, err
+		}
 	}
 	//fmt.Println(t38Map)
 	return t38Map, nil
