@@ -1,0 +1,3 @@
+tar cvf /media/pi/ADATA\ HM900/STOCK_DATA_BACKUP/20190626.tar /run/shm/.gogrscache
+
+tar xvf 20190626.tar -C /
