@@ -195,7 +195,10 @@ var getT44Cmd = &cobra.Command{
 	Long:  `Get All Stock of Investment Trust`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		getT44(tradingdays.FindRecentlyOpened(time.Now()))
+		if v, err := getT44(tradingdays.FindRecentlyOpened(time.Now())); err == nil {
+			debugPrintf("%v\n", v)
+		}
+
 	},
 }
 
@@ -241,7 +244,10 @@ func checkFirstDayOfMonth(stock *twse.Data) error {
 	//fmt.Println("checkFirstDayOfMonth:", stock.Date, d, stock.Date==d)
 }
 
-var T38DataMap map[time.Time]map[string]TXXData = make(map[time.Time]map[string]TXXData)
+var (
+	T38DataMap map[time.Time]map[string]TXXData = make(map[time.Time]map[string]TXXData)
+	T44DataMap map[time.Time]map[string]TXXData = make(map[time.Time]map[string]TXXData)
+)
 
 func getT38ByDate(stockNo string, day int) (bool, []int64) {
 	var (
@@ -255,6 +261,35 @@ func getT38ByDate(stockNo string, day int) (bool, []int64) {
 
 		//debugPrintf("overbought:%d getDay:%d\n", overbought, getDay)
 		if v, err := getT38(i); err == nil {
+			getDay++
+			if v[stockNo].Total > 0 {
+				debugPrintf("%d\n", overbought)
+				data[overbought] = v[stockNo].Total
+				overbought++
+			}
+		}
+	}
+	debugPrintf("getDay=%d, day=%d, overbought=%d\n", getDay, day, overbought)
+	if getDay == day {
+
+		debugPrintf("%t %d, day=%d, overbought=%d\n", overbought == day, getDay, day, overbought)
+		return overbought == day, data
+	} else {
+		return false, nil
+	}
+}
+func getT44ByDate(stockNo string, day int) (bool, []int64) {
+	var (
+		overbought int
+		getDay     int
+	)
+
+	data := make([]int64, day)
+	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
+
+		//debugPrintf("overbought:%d getDay:%d\n", overbought, getDay)
+		if v, err := getT44(i); err == nil {
 			getDay++
 			if v[stockNo].Total > 0 {
 				debugPrintf("%d\n", overbought)
@@ -296,23 +331,32 @@ func getTWSE(category string, minDataNum int) error {
 		stock := twse.NewTWSE(v.No, RecentlyOpendtoday)
 		//checkFirstDayOfMonth(stock)
 		if err := prepareStock(stock, minDataNum); err == nil {
-			isOverBought, _ := getT38ByDate(v.No, 3)
+			isT38OverBought, _ := getT38ByDate(v.No, 3)
+			isT44OverBought, _ := getT44ByDate(v.No, 3)
 			if res, err := showStock(stock, minDataNum); err == nil {
-				err = csvWriter.Write([]string{v.No,
-					fmt.Sprintf("%.2f", res.todayRange),
-					fmt.Sprintf("%.2f", res.todayPrice),
-					fmt.Sprintf("%.2f", res.todayGain),
-					fmt.Sprintf("%.2f", res.NDayAvg),
-					fmt.Sprintf("%t", res.overMA),
-					fmt.Sprintf("%t", isOverBought)})
-				if err != nil {
-					return err
+				if /*res.todayGain >= 3.5 &&*/
+				res.overMA == true &&
+					isT38OverBought == true &&
+					isT44OverBought == true {
+					err = csvWriter.Write([]string{v.No,
+						v.Name,
+						fmt.Sprintf("%.2f", res.todayRange),
+						fmt.Sprintf("%.2f", res.todayPrice),
+						fmt.Sprintf("%.2f", res.todayGain),
+						fmt.Sprintf("%.2f", res.NDayAvg),
+						fmt.Sprintf("%t", res.overMA),
+						fmt.Sprintf("%t", isT38OverBought),
+						fmt.Sprintf("%t", isT44OverBought)})
+					if err != nil {
+						return err
+					}
+					csvWriter.Flush()
+					err = csvWriter.Error()
+					if err != nil {
+						return err
+					}
 				}
-				csvWriter.Flush()
-				err = csvWriter.Error()
-				if err != nil {
-					return err
-				}
+
 				fmt.Printf("No: %6s Range: %.2f Price: %.2f Gain: %.2f%% NDayAvg:%.2f overMA:%t\n",
 					v.No,
 					res.todayRange,
@@ -519,26 +563,51 @@ func getT38(date time.Time) (map[string]TXXData, error) {
 }
 func getT44(date time.Time) (map[string]TXXData, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	if v, ok := T44DataMap[date]; ok {
+		debugPrintf("Reuse T44Data:%v\n", date)
+		return v, nil
+	}
 
 	t44 := twse.NewTWT44U(date)
-	fmt.Println(t44.URL())
+	//fmt.Println(t44.URL())
 	t44Map := make(map[string]TXXData)
 	if data, err := t44.Get(); err == nil {
 		for _, v := range data {
-			fmt.Printf("No: %s Buy %d Sell %d Total %d\n",
-				v[0].No,
-				v[0].Buy,
-				v[0].Sell,
-				v[0].Total)
+			//	fmt.Printf("No: %s Buy %d Sell %d Total %d\n",
+			//		v[0].No,
+			//		v[0].Buy,
+			//		v[0].Sell,
+			//		v[0].Total)
 			t44Map[v[0].No] = TXXData{v[0].Buy, v[0].Sell, v[0].Total}
 		}
 
 	} else {
-		fmt.Println("Error: ", err.Error())
-		return nil, err
+		debugPrintf("Error: %s\n", err.Error())
+		if strings.Contains(err.Error(), "File No Data") {
+			if err := os.Remove(GetMD5FilePath(t44)); err != nil {
+				return nil, err
+			} else {
+				if data, err = t44.Get(); err != nil {
+					//if t44Map, err = getT44(date.AddDate(0,0,-1));err!=nil{
+					return nil, err
+					//}
+
+				} else {
+					for _, v := range data {
+						//	fmt.Printf("No: %s Buy %d Sell %d Total %d\n",
+						//		v[0].No,
+						//		v[0].Buy,
+						//		v[0].Sell,
+						//		v[0].Total)
+						t44Map[v[0].No] = TXXData{v[0].Buy, v[0].Sell, v[0].Total}
+					}
+				}
+			}
+		}
 	}
-	return t44Map, nil
 	//fmt.Println(t44Map)
+	T44DataMap[date] = t44Map
+	return t44Map, nil
 }
 
 func showMyAll(stock *twse.Data) {

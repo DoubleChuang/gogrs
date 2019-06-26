@@ -195,15 +195,21 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 	var csvArrayContent = strings.Split(string(data), "\n")
 	switch t.fund {
 	case "TWT38U":
-		if len(csvArrayContent) < 9{
+		if len(csvArrayContent) < 9 {
 			return nil, fmt.Errorf("File No Data\n")
 		}
 		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-9]
 		datalist = 1
 	case "TWT43U":
+		if len(csvArrayContent) < 5 {
+			return nil, fmt.Errorf("File No Data\n")
+		}
 		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-5]
 		datalist = 3
 	case "TWT44U":
+		if len(csvArrayContent) < 9 {
+			return nil, fmt.Errorf("File No Data\n")
+		}
 		csvArrayContent = csvArrayContent[2 : len(csvArrayContent)-9]
 		//fmt.Println(csvArrayContent)
 		datalist = 1
@@ -217,7 +223,6 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 	}
 
 	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
-	
 
 		result = make([][]BaseSellBuy, len(csvdata))
 		for i, v := range csvdata {
