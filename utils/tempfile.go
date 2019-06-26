@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -21,9 +22,11 @@ import (
 const TempFolderName = ".gogrscache"
 
 //與TWSE訪問需間隔的時間差
-const TWSEDURTION= 4
+const TWSEDURTION = 5
+
 //與OTC訪問需間隔的時間差
 const OTCDURTION = 0
+
 //上一次造訪TWSE時間
 var visitTwseTime time.Time = time.Now()
 
@@ -59,37 +62,40 @@ func makeCacheDir(dir string) string {
 	}
 	return dir
 }
+
 //checkAndSyncVisitTime 在 Post 或 Get 時檢查是否太頻繁
 //訪問伺服器 如果時間小於過設定的時間差距則等待並同步這
 //次存取的時間
 
-func checkAndSyncVisitTime(urlWeb string){
-	switch urlWeb{
-		case "twse":
-			t:=time.Now().Sub(visitTwseTime)
-			if t.Seconds() < TWSEDURTION * time.Second.Seconds(){
-				//fmt.Println("Sleep:",TWSEDURTION * time.Second-t)
-				time.Sleep(TWSEDURTION * time.Second-t)
-			}
-			visitTwseTime = time.Now()
-		case "otc":
-			t:=time.Now().Sub(visitOtcTime)
-			if t.Seconds() < OTCDURTION * time.Second.Seconds(){
-				//fmt.Println("Sleep:",TWSEDURTION * time.Second-t)
-				time.Sleep(TWSEDURTION * time.Second-t)
-			}
-			visitOtcTime = time.Now()
-		default:
+func checkAndSyncVisitTime(urlWeb string) {
+	rand.Seed(time.Now().UnixNano())
+	ms := rand.Intn(1000)
+	switch urlWeb {
+	case "twse":
+		t := time.Now().Sub(visitTwseTime)
+		if t.Seconds() < TWSEDURTION*time.Second.Seconds() {
+			//fmt.Println("Sleep:",TWSEDURTION * time.Second-t)
+			time.Sleep(TWSEDURTION*time.Second - t + time.Duration(ms)*time.Millisecond)
 		}
+		visitTwseTime = time.Now()
+	case "otc":
+		t := time.Now().Sub(visitOtcTime)
+		if t.Seconds() < OTCDURTION*time.Second.Seconds() {
+			//fmt.Println("Sleep:",TWSEDURTION * time.Second-t)
+			time.Sleep(TWSEDURTION*time.Second - t)
+		}
+		visitOtcTime = time.Now()
+	default:
+	}
 }
-func whereUrl(url string) string{
-	if strings.Contains(url, TWSEHOST){
-        return "twse"
-    }else if strings.Contains(url, OTCHOST){
-        return "otc"
-    }else{
-        return"Unknown"
-    }
+func whereUrl(url string) string {
+	if strings.Contains(url, TWSEHOST) {
+		return "twse"
+	} else if strings.Contains(url, OTCHOST) {
+		return "otc"
+	} else {
+		return "Unknown"
+	}
 }
 
 // Get 透過 http.Get 取得檔案或從暫存中取得檔案
@@ -102,9 +108,9 @@ func (hc HTTPCache) Get(url string, rand bool) ([]byte, error) {
 		err     error
 	)
 
-	fmt.Printf("file:%s%s/%s\n",GetOSRamdiskPath(""),TempFolderName, filehash)
+	fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
 	if content, err = hc.readFile(filehash); err != nil {
-		checkAndSyncVisitTime( whereUrl(url) )
+		checkAndSyncVisitTime(whereUrl(url))
 		return hc.saveFile(url, filehash, rand, nil)
 	}
 	return content, nil
@@ -122,10 +128,10 @@ func (hc HTTPCache) PostForm(url string, data url.Values) ([]byte, error) {
 	)
 
 	filehash := fmt.Sprintf("%x", hash.Sum(nil))
-	
-	fmt.Printf("file:%s%s/%s\n",GetOSRamdiskPath(""),TempFolderName, filehash)
+
+	fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
 	if content, err = hc.readFile(filehash); err != nil {
-		checkAndSyncVisitTime( whereUrl(url) )
+		checkAndSyncVisitTime(whereUrl(url))
 
 		return hc.saveFile(url, filehash, false, data)
 	}
