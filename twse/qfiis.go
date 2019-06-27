@@ -2,12 +2,17 @@ package twse
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/DoubleChuang/gogrs/utils"
+)
+
+// 錯誤資訊
+var (
+	errorFileNoData = errors.New("File No Data")
 )
 
 // BaseSellBuy 買進賣出合計
@@ -196,19 +201,19 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 	switch t.fund {
 	case "TWT38U":
 		if len(csvArrayContent) < 9 {
-			return nil, fmt.Errorf("File No Data\n")
+			return nil, errorFileNoData
 		}
 		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-9]
 		datalist = 1
 	case "TWT43U":
 		if len(csvArrayContent) < 5 {
-			return nil, fmt.Errorf("File No Data\n")
+			return nil, errorFileNoData
 		}
 		csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-5]
 		datalist = 3
 	case "TWT44U":
 		if len(csvArrayContent) < 9 {
-			return nil, fmt.Errorf("File No Data\n")
+			return nil, errorFileNoData
 		}
 		csvArrayContent = csvArrayContent[2 : len(csvArrayContent)-9]
 		//fmt.Println(csvArrayContent)

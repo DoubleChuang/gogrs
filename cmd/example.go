@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
@@ -196,7 +195,7 @@ var getT44Cmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		if v, err := getT44(tradingdays.FindRecentlyOpened(time.Now())); err == nil {
-			debugPrintf("%v\n", v)
+			utils.Dbg("%v\n", v)
 		}
 
 	},
@@ -213,14 +212,7 @@ func GetMD5FilePath(f md5File) string {
 	filehash := fmt.Sprintf("%s%s/%x", utils.GetOSRamdiskPath(""), utils.TempFolderName, hash.Sum(nil))
 	return filehash
 }
-func debugPrintf(fmt_ string, args ...interface{}) {
-	programCounter, _, line, _ := runtime.Caller(1)
-	fn := runtime.FuncForPC(programCounter)
-	//prefix := fmt.Sprintf("[%s:%s %d] %s", file, fn.Name(), line, fmt_)
-	prefix := fmt.Sprintf("[%s %d] %s", fn.Name(), line, fmt_)
-	fmt.Printf(prefix, args...)
-	fmt.Println()
-}
+
 
 func checkFirstDayOfMonth(stock *twse.Data) error {
 	year, month, day := stock.Date.Date()
@@ -231,10 +223,10 @@ func checkFirstDayOfMonth(stock *twse.Data) error {
 	io.WriteString(hash, s.URL())
 	io.WriteString(hash, "")
 	filehash := fmt.Sprintf("%x", hash.Sum(nil))
-	//debugPrintf("filehash:%s\n", filehash)
+	//utils.Dbg("filehash:%s\n", filehash)
 	str := utils.GetOSRamdiskPath("") + utils.TempFolderName + "/" + filehash
 	if err := os.Remove(str); err != nil {
-		debugPrintf("Remove: %s %s\n", str, err)
+		utils.Dbg("Remove: %s %s\n", str, err)
 		return err
 	} else {
 		fmt.Println("Remove: ", str)
@@ -257,22 +249,17 @@ func getT38ByDate(stockNo string, day int) (bool, []int64) {
 
 	data := make([]int64, day)
 	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
-	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
-
-		//debugPrintf("overbought:%d getDay:%d\n", overbought, getDay)
+	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
 		if v, err := getT38(i); err == nil {
 			getDay++
 			if v[stockNo].Total > 0 {
-				debugPrintf("%d\n", overbought)
 				data[overbought] = v[stockNo].Total
 				overbought++
 			}
 		}
 	}
-	debugPrintf("getDay=%d, day=%d, overbought=%d\n", getDay, day, overbought)
 	if getDay == day {
-
-		debugPrintf("%t %d, day=%d, overbought=%d\n", overbought == day, getDay, day, overbought)
 		return overbought == day, data
 	} else {
 		return false, nil
@@ -286,22 +273,16 @@ func getT44ByDate(stockNo string, day int) (bool, []int64) {
 
 	data := make([]int64, day)
 	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
-	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
-
-		//debugPrintf("overbought:%d getDay:%d\n", overbought, getDay)
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
 		if v, err := getT44(i); err == nil {
 			getDay++
 			if v[stockNo].Total > 0 {
-				debugPrintf("%d\n", overbought)
 				data[overbought] = v[stockNo].Total
 				overbought++
 			}
 		}
 	}
-	debugPrintf("getDay=%d, day=%d, overbought=%d\n", getDay, day, overbought)
 	if getDay == day {
-
-		debugPrintf("%t %d, day=%d, overbought=%d\n", overbought == day, getDay, day, overbought)
 		return overbought == day, data
 	} else {
 		return false, nil
@@ -318,7 +299,7 @@ func getTWSE(category string, minDataNum int) error {
 	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	defer csvFile.Close()
 	if err != nil {
-		debugPrintf("error: %s\n", err)
+		utils.Dbg("error: %s\n", err)
 		return err
 	}
 	csvWriter := csv.NewWriter(csvFile)
@@ -385,7 +366,7 @@ func getOTC(category string, minDataNum int) error {
 	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	defer csvFile.Close()
 	if err != nil {
-		debugPrintf("error: %s\n", err)
+		utils.Dbg("error: %s\n", err)
 		return err
 	}
 	csvWriter := csv.NewWriter(csvFile)
@@ -516,7 +497,7 @@ type TXXData struct {
 func getT38(date time.Time) (map[string]TXXData, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	if v, ok := T38DataMap[date]; ok {
-		debugPrintf("Reuse T38Data:%v\n", date)
+		//utils.Dbg("Reuse T38Data:%v\n", date)
 		return v, nil
 	}
 
@@ -534,7 +515,7 @@ func getT38(date time.Time) (map[string]TXXData, error) {
 		}
 
 	} else {
-		debugPrintf("Error: %s\n", err.Error())
+		utils.Dbg("Error: %s\n", err.Error())
 		if strings.Contains(err.Error(), "File No Data") {
 			if err := os.Remove(GetMD5FilePath(t38)); err != nil {
 				return nil, err
@@ -564,7 +545,7 @@ func getT38(date time.Time) (map[string]TXXData, error) {
 func getT44(date time.Time) (map[string]TXXData, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	if v, ok := T44DataMap[date]; ok {
-		debugPrintf("Reuse T44Data:%v\n", date)
+		//utils.Dbg("Reuse T44Data:%v\n", date)
 		return v, nil
 	}
 
@@ -582,7 +563,7 @@ func getT44(date time.Time) (map[string]TXXData, error) {
 		}
 
 	} else {
-		debugPrintf("Error: %s\n", err.Error())
+		utils.Dbg("Error: %s\n", err.Error())
 		if strings.Contains(err.Error(), "File No Data") {
 			if err := os.Remove(GetMD5FilePath(t44)); err != nil {
 				return nil, err

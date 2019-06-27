@@ -20,4 +20,6 @@
     料尚未更新 或是改成抓前一天
 # 8
     prepareStock 修改成回err而不是bool
+# 9 
+	[ErrorHandler](https://github.com/EthanCai/goErrorHandlingSample)
 
