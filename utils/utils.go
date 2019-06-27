@@ -33,6 +33,7 @@ const (
 	BFI82U      string = "/fund/BFI82U?response=csv&dayDate=%d%02d%02d&type=day" // yyyymmdd
 	T86         string = "/fund/T86?response=csv&date=%d%02d%02d&selectType=ALL"
 	TWTXXU      string = "/fund/%s?response=csv&date=%d%02d%02d"
+	TWMTSS      string = "/exchangeReport/MI_MARGN?response=csv&date=%d%02d%02d&selectType=ALL"
 	S3CSV       string = "https://s3-ap-northeast-1.amazonaws.com/toomore/gogrs/list.csv"
 )
 

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/DoubleChuang/gogrs/utils"
 )
 
@@ -162,6 +163,11 @@ type TWTXXU struct {
 	fund string
 }
 
+// NewTWT38U 外資及陸資買賣超彙總表
+func NewTWT38U(date time.Time) *TWTXXU {
+	return &TWTXXU{Date: date, fund: "TWT38U"}
+}
+
 // NewTWT43U 自營商買賣超彙總表
 func NewTWT43U(date time.Time) *TWTXXU {
 	return &TWTXXU{Date: date, fund: "TWT43U"}
@@ -172,15 +178,21 @@ func NewTWT44U(date time.Time) *TWTXXU {
 	return &TWTXXU{Date: date, fund: "TWT44U"}
 }
 
-// NewTWT38U 外資及陸資買賣超彙總表
-func NewTWT38U(date time.Time) *TWTXXU {
-	return &TWTXXU{Date: date, fund: "TWT38U"}
+// NewTWMTSS 融資融券匯總 Margin Trading and Short Selling
+func NewTWMTSS(date time.Time) *TWTXXU {
+	return &TWTXXU{Date: date, fund: "TWMTSS"}
 }
 
 // URL 擷取網址
 func (t TWTXXU) URL() string {
-	return fmt.Sprintf("%s%s", utils.TWSEHOST,
-		fmt.Sprintf(utils.TWTXXU, t.fund, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+	switch t.fund {
+	case "TWMTSS":
+		return fmt.Sprintf("%s%s", utils.TWSEHOST,
+			fmt.Sprintf(utils.TWMTSS, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+	default:
+		return fmt.Sprintf("%s%s", utils.TWSEHOST,
+			fmt.Sprintf(utils.TWTXXU, t.fund, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+	}
 }
 
 // Get 擷取資料
