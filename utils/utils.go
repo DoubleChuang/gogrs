@@ -4,7 +4,9 @@
 package utils
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 	"math"
 	"regexp"
 	"runtime"
@@ -36,12 +38,13 @@ const (
 	TWMTSS      string = "/exchangeReport/MI_MARGN?response=csv&date=%d%02d%02d&selectType=%s"
 	S3CSV       string = "https://s3-ap-northeast-1.amazonaws.com/toomore/gogrs/list.csv"
 )
+
 func Dbgln(args ...interface{}) {
 	programCounter, _, line, _ := runtime.Caller(1)
 	fn := runtime.FuncForPC(programCounter)
 	//prefix := fmt.Sprintf("[%s:%s %d] %s", file, fn.Name(), line, fmt_)
 	prefix := fmt.Sprintf("[%s %d]", fn.Name(), line)
-	
+
 	fmt.Printf("%s", prefix)
 	fmt.Println(args...)
 }
@@ -52,6 +55,18 @@ func Dbg(fmt_ string, args ...interface{}) {
 	prefix := fmt.Sprintf("[%s %d] %s", fn.Name(), line, fmt_)
 	fmt.Printf(prefix, args...)
 	fmt.Println()
+}
+
+type StockCsvFile interface {
+	URL() string
+}
+
+func GetMD5FilePath(f StockCsvFile) string {
+	hash := md5.New()
+	io.WriteString(hash, f.URL())
+	io.WriteString(hash, "")
+	filehash := fmt.Sprintf("%s%s/%x", GetOSRamdiskPath(""), TempFolderName, hash.Sum(nil))
+	return filehash
 }
 
 // RandInt return random int.

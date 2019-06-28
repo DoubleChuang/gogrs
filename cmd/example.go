@@ -23,12 +23,13 @@ package cmd
 import (
 	"crypto/md5"
 	"encoding/csv"
-	"github.com/pkg/errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/DoubleChuang/gogrs/tradingdays"
 	"github.com/DoubleChuang/gogrs/twse"
@@ -153,11 +154,11 @@ var getAllStockCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		//getT38(tradingdays.FindRecentlyOpened(time.Now()))
 		//getT44(tradingdays.FindRecentlyOpened(time.Now()))
-		
+
 		//getTWSE("ALLBUT0999", *minDataNum)
 		//getTWSE("26", *minDataNum)
 		//getOTC("EW", *minDataNum)
-		if v, err := getMTSS(tradingdays.FindRecentlyOpened(time.Now()).AddDate(0,0,-1)); err ==nil{
+		if v, err := getMTSS(tradingdays.FindRecentlyOpened(time.Now()).AddDate(0, 0, -1)); err == nil {
 			utils.Dbgln(v)
 		}
 	},
@@ -203,19 +204,6 @@ var getT44Cmd = &cobra.Command{
 
 	},
 }
-
-type md5File interface {
-	URL() string
-}
-
-func GetMD5FilePath(f md5File) string {
-	hash := md5.New()
-	io.WriteString(hash, f.URL())
-	io.WriteString(hash, "")
-	filehash := fmt.Sprintf("%s%s/%x", utils.GetOSRamdiskPath(""), utils.TempFolderName, hash.Sum(nil))
-	return filehash
-}
-
 
 func checkFirstDayOfMonth(stock *twse.Data) error {
 	year, month, day := stock.Date.Date()
@@ -496,7 +484,8 @@ type TXXData struct {
 	Sell  int64
 	Total int64
 }
-func getMTSS(date time.Time) ([]twse.BaseMTSS, error) {
+
+func getMTSS(date time.Time) (map[string]twse.BaseMTSS, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	mtss := twse.NewTWMTSS(date, "ALL")
 	v, err := mtss.Get()
@@ -528,7 +517,7 @@ func getT38(date time.Time) (map[string]TXXData, error) {
 	} else {
 		utils.Dbg("Error: %s\n", err.Error())
 		if strings.Contains(err.Error(), "File No Data") {
-			if err := os.Remove(GetMD5FilePath(t38)); err != nil {
+			if err := os.Remove(utils.GetMD5FilePath(t38)); err != nil {
 				return nil, err
 			} else {
 				if data, err = t38.Get(); err != nil {
@@ -576,7 +565,7 @@ func getT44(date time.Time) (map[string]TXXData, error) {
 	} else {
 		utils.Dbg("Error: %s\n", err.Error())
 		if strings.Contains(err.Error(), "File No Data") {
-			if err := os.Remove(GetMD5FilePath(t44)); err != nil {
+			if err := os.Remove(utils.GetMD5FilePath(t44)); err != nil {
 				return nil, err
 			} else {
 				if data, err = t44.Get(); err != nil {

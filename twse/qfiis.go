@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -157,7 +158,7 @@ func (t T86) Get(cate string) ([]T86Data, error) {
 	return result, err
 }
 
-type unixMapMTSSData map[int64][][]BaseMTSS
+type unixMapMTSSData map[int64]map[string]BaseMTSS
 
 type TradingVolume struct {
 	Buy   int64 // 買進
@@ -192,12 +193,16 @@ func (t TWMTSS) URL() string {
 			t.Category))
 
 }
-func (t *TWMTSS) Get() ([]BaseMTSS, error) {
+func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
+	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
+	if v, ok := t.UnixMapMTSSData[dateUnix]; ok {
+		return v, nil
+	}
 	var (
-		csvdata [][]string
-		data    []byte
-		err     error
-		result  []BaseMTSS
+		csvdata   [][]string
+		data      []byte
+		err       error
+		resultMap map[string]BaseMTSS
 	)
 	fmt.Println(t.URL())
 	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
@@ -205,6 +210,9 @@ func (t *TWMTSS) Get() ([]BaseMTSS, error) {
 	}
 	var csvArrayContent = strings.Split(string(data), "\n")
 	if len(csvArrayContent) < 14 {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, err
+		}
 		return nil, errorFileNoData
 	}
 	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
@@ -215,27 +223,29 @@ func (t *TWMTSS) Get() ([]BaseMTSS, error) {
 	}
 
 	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
-		result = make([]BaseMTSS, len(csvdata))
+		resultMap = make(map[string]BaseMTSS, len(csvdata))
 		for i, v := range csvdata {
 			if i == 0 && false == checkCsvDataFormat("MTSS", v) {
 				return nil, errors.New("Wrong MTSS Csv Data Format")
 			}
+			var r BaseMTSS
+			no := strings.Replace(v[0], " ", "", -1)
 
-			result[i].No = strings.Replace(v[0], " ", "", -1)
-			result[i].Name = strings.Replace(v[1], " ", "", -1)
+			r.Name = strings.Replace(v[1], " ", "", -1)
 
-			result[i].MT.Buy, _ = strconv.ParseInt(strings.Replace(v[2], ",", "", -1), 10, 64)
-			result[i].MT.Sell, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
+			r.MT.Buy, _ = strconv.ParseInt(strings.Replace(v[2], ",", "", -1), 10, 64)
+			r.MT.Sell, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
 			//TODO:確認是否是這樣計算總數
-			result[i].MT.Total = result[i].MT.Buy - result[i].MT.Sell
+			r.MT.Total = resultMap[no].MT.Buy - resultMap[no].MT.Sell
 
-			result[i].SS.Buy, _ = strconv.ParseInt(strings.Replace(v[8], ",", "", -1), 10, 64)
-			result[i].SS.Sell, _ = strconv.ParseInt(strings.Replace(v[9], ",", "", -1), 10, 64)
+			r.SS.Buy, _ = strconv.ParseInt(strings.Replace(v[8], ",", "", -1), 10, 64)
+			r.SS.Sell, _ = strconv.ParseInt(strings.Replace(v[9], ",", "", -1), 10, 64)
 			//TODO:確認是否是這樣計算總數
-			result[i].SS.Total = result[i].SS.Sell - result[i].SS.Buy
+			r.SS.Total = resultMap[no].SS.Sell - resultMap[no].SS.Buy
+			resultMap[no] = r
 		}
 	}
-	return result, err
+	return resultMap, err
 }
 
 // TWTXXU 產生 自營商、投信、外資及陸資買賣超彙總表
@@ -269,12 +279,12 @@ func checkCsvDataFormat(t string, data []string) bool {
 
 	switch t {
 	case "TeckCsvDataFormatMTSS":
-		return 	"賣出" == strings.Replace(data[9], " ", "", -1)	    &&
-				"買進" == strings.Replace(data[8], " ", "", -1)	    &&
-				"賣出" == strings.Replace(data[3], " ", "", -1)	    &&
-				"買進" == strings.Replace(data[2], " ", "", -1)	    &&
- 				"股票名稱" == strings.Replace(data[1], " ", "", -1) &&
-				"股票代號" == strings.Replace(data[0], " ", "", -1)
+		return "賣出" == strings.Replace(data[9], " ", "", -1) &&
+			"買進" == strings.Replace(data[8], " ", "", -1) &&
+			"賣出" == strings.Replace(data[3], " ", "", -1) &&
+			"買進" == strings.Replace(data[2], " ", "", -1) &&
+			"股票名稱" == strings.Replace(data[1], " ", "", -1) &&
+			"股票代號" == strings.Replace(data[0], " ", "", -1)
 	default:
 		return true
 	}
