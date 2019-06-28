@@ -157,6 +157,87 @@ func (t T86) Get(cate string) ([]T86Data, error) {
 	return result, err
 }
 
+type unixMapMTSSData map[int64][][]BaseMTSS
+
+type TradingVolume struct {
+	Buy   int64 // 買進
+	Sell  int64 // 賣出
+	Total int64 // 合計
+}
+type BaseMTSS struct {
+	No   string
+	Name string
+	MT   TradingVolume
+	SS   TradingVolume
+}
+
+type TWMTSS struct {
+	Date            time.Time
+	Category        string
+	UnixMapMTSSData unixMapMTSSData
+}
+
+// NewTWMTSS 融資融券匯總 Margin Trading and Short Selling
+func NewTWMTSS(date time.Time, category string) *TWMTSS {
+	return &TWMTSS{
+		Date:            date,
+		Category:        category,
+		UnixMapMTSSData: make(unixMapMTSSData),
+	}
+}
+func (t TWMTSS) URL() string {
+	return fmt.Sprintf("%s%s", utils.TWSEHOST,
+		fmt.Sprintf(utils.TWMTSS,
+			t.Date.Year(), t.Date.Month(), t.Date.Day(),
+			t.Category))
+
+}
+func (t *TWMTSS) Get() ([]BaseMTSS, error) {
+	var (
+		csvdata [][]string
+		data    []byte
+		err     error
+		result  []BaseMTSS
+	)
+	fmt.Println(t.URL())
+	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
+		return nil, err
+	}
+	var csvArrayContent = strings.Split(string(data), "\n")
+	if len(csvArrayContent) < 14 {
+		return nil, errorFileNoData
+	}
+	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
+	csvArrayContent = csvArrayContent[7 : len(csvArrayContent)-8]
+
+	for i, v := range csvArrayContent {
+		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+	}
+
+	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+		result = make([]BaseMTSS, len(csvdata))
+		for i, v := range csvdata {
+			if i == 0 && false == checkCsvDataFormat("MTSS", v) {
+				return nil, errors.New("Wrong MTSS Csv Data Format")
+			}
+
+			result[i].No = strings.Replace(v[0], " ", "", -1)
+			result[i].Name = strings.Replace(v[1], " ", "", -1)
+
+			result[i].MT.Buy, _ = strconv.ParseInt(strings.Replace(v[2], ",", "", -1), 10, 64)
+			result[i].MT.Sell, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
+			//TODO:確認是否是這樣計算總數
+			result[i].MT.Total = result[i].MT.Buy - result[i].MT.Sell
+
+			result[i].SS.Buy, _ = strconv.ParseInt(strings.Replace(v[8], ",", "", -1), 10, 64)
+			result[i].SS.Sell, _ = strconv.ParseInt(strings.Replace(v[9], ",", "", -1), 10, 64)
+			//TODO:確認是否是這樣計算總數
+			result[i].SS.Total = result[i].SS.Sell - result[i].SS.Buy
+		}
+	}
+	return result, err
+}
+
 // TWTXXU 產生 自營商、投信、外資及陸資買賣超彙總表
 type TWTXXU struct {
 	Date time.Time
@@ -178,20 +259,24 @@ func NewTWT44U(date time.Time) *TWTXXU {
 	return &TWTXXU{Date: date, fund: "TWT44U"}
 }
 
-// NewTWMTSS 融資融券匯總 Margin Trading and Short Selling
-func NewTWMTSS(date time.Time) *TWTXXU {
-	return &TWTXXU{Date: date, fund: "TWMTSS"}
-}
-
 // URL 擷取網址
 func (t TWTXXU) URL() string {
-	switch t.fund {
-	case "TWMTSS":
-		return fmt.Sprintf("%s%s", utils.TWSEHOST,
-			fmt.Sprintf(utils.TWMTSS, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+	return fmt.Sprintf("%s%s", utils.TWSEHOST,
+		fmt.Sprintf(utils.TWTXXU, t.fund, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+
+}
+func checkCsvDataFormat(t string, data []string) bool {
+
+	switch t {
+	case "TeckCsvDataFormatMTSS":
+		return 	"賣出" == strings.Replace(data[9], " ", "", -1)	    &&
+				"買進" == strings.Replace(data[8], " ", "", -1)	    &&
+				"賣出" == strings.Replace(data[3], " ", "", -1)	    &&
+				"買進" == strings.Replace(data[2], " ", "", -1)	    &&
+ 				"股票名稱" == strings.Replace(data[1], " ", "", -1) &&
+				"股票代號" == strings.Replace(data[0], " ", "", -1)
 	default:
-		return fmt.Sprintf("%s%s", utils.TWSEHOST,
-			fmt.Sprintf(utils.TWTXXU, t.fund, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+		return true
 	}
 }
 
@@ -208,7 +293,6 @@ func (t TWTXXU) Get() ([][]BaseSellBuy, error) {
 	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
 		return nil, err
 	}
-
 	var csvArrayContent = strings.Split(string(data), "\n")
 	switch t.fund {
 	case "TWT38U":

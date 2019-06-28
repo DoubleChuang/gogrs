@@ -23,7 +23,7 @@ package cmd
 import (
 	"crypto/md5"
 	"encoding/csv"
-	"errors"
+	"github.com/pkg/errors"
 	"fmt"
 	"io"
 	"os"
@@ -153,10 +153,13 @@ var getAllStockCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		//getT38(tradingdays.FindRecentlyOpened(time.Now()))
 		//getT44(tradingdays.FindRecentlyOpened(time.Now()))
-
-		getTWSE("ALLBUT0999", *minDataNum)
+		
+		//getTWSE("ALLBUT0999", *minDataNum)
 		//getTWSE("26", *minDataNum)
 		//getOTC("EW", *minDataNum)
+		if v, err := getMTSS(tradingdays.FindRecentlyOpened(time.Now()).AddDate(0,0,-1)); err ==nil{
+			utils.Dbgln(v)
+		}
 	},
 }
 
@@ -493,7 +496,15 @@ type TXXData struct {
 	Sell  int64
 	Total int64
 }
-
+func getMTSS(date time.Time) ([]twse.BaseMTSS, error) {
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	mtss := twse.NewTWMTSS(date, "ALL")
+	v, err := mtss.Get()
+	if err != nil {
+		return nil, errors.Wrap(err, "Get MTSS Fail")
+	}
+	return v, nil
+}
 func getT38(date time.Time) (map[string]TXXData, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	if v, ok := T38DataMap[date]; ok {
