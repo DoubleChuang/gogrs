@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -193,6 +192,11 @@ func (t TWMTSS) URL() string {
 			t.Category))
 
 }
+func (t *TWMTSS) Round() {
+	year, month, day := t.Date.Date()
+	t.Date = time.Date(year, month, day-1, 0, 0, 0, 0, t.Date.Location())
+}
+
 func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
 	if v, ok := t.UnixMapMTSSData[dateUnix]; ok {
@@ -210,9 +214,9 @@ func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 	}
 	var csvArrayContent = strings.Split(string(data), "\n")
 	if len(csvArrayContent) < 14 {
-		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
 			return nil, err
-		}
+		}*/
 		return nil, errorFileNoData
 	}
 	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
@@ -225,8 +229,11 @@ func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
 		resultMap = make(map[string]BaseMTSS, len(csvdata))
 		for i, v := range csvdata {
-			if i == 0 && false == checkCsvDataFormat("MTSS", v) {
-				return nil, errors.New("Wrong MTSS Csv Data Format")
+			if i == 0 {
+				if false == checkCsvDataFormat("MTSS", v) {
+					return nil, errors.New("Wrong MTSS Csv Data Format")
+				}
+				continue
 			}
 			var r BaseMTSS
 			no := strings.Replace(v[0], " ", "", -1)
@@ -236,14 +243,16 @@ func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 			r.MT.Buy, _ = strconv.ParseInt(strings.Replace(v[2], ",", "", -1), 10, 64)
 			r.MT.Sell, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
 			//TODO:確認是否是這樣計算總數
-			r.MT.Total = resultMap[no].MT.Buy - resultMap[no].MT.Sell
+			r.MT.Total = r.MT.Buy - r.MT.Sell
 
 			r.SS.Buy, _ = strconv.ParseInt(strings.Replace(v[8], ",", "", -1), 10, 64)
 			r.SS.Sell, _ = strconv.ParseInt(strings.Replace(v[9], ",", "", -1), 10, 64)
 			//TODO:確認是否是這樣計算總數
-			r.SS.Total = resultMap[no].SS.Sell - resultMap[no].SS.Buy
+			r.SS.Total = r.SS.Sell - r.SS.Buy
 			resultMap[no] = r
+
 		}
+		t.UnixMapMTSSData[dateUnix] = resultMap
 	}
 	return resultMap, err
 }

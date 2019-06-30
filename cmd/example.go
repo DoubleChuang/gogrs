@@ -158,9 +158,11 @@ var getAllStockCmd = &cobra.Command{
 		//getTWSE("ALLBUT0999", *minDataNum)
 		//getTWSE("26", *minDataNum)
 		//getOTC("EW", *minDataNum)
-		if v, err := getMTSS(tradingdays.FindRecentlyOpened(time.Now()).AddDate(0, 0, -1)); err == nil {
+		if v, err := getMTSS(tradingdays.FindRecentlyOpened(time.Now())); err == nil {
 			utils.Dbgln(v)
 		}
+		//isMTSSOverBought, _ := getMTSSByDate("1215", 1)
+		//fmt.Println(isMTSSOverBought)
 	},
 }
 
@@ -231,6 +233,31 @@ var (
 	T38DataMap map[time.Time]map[string]TXXData = make(map[time.Time]map[string]TXXData)
 	T44DataMap map[time.Time]map[string]TXXData = make(map[time.Time]map[string]TXXData)
 )
+
+func getMTSSByDate(stockNo string, day int) (bool, []int64) {
+	var (
+		overbought int
+		getDay     int
+	)
+
+	data := make([]int64, day)
+	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
+		if v, err := getMTSS(i); err == nil {
+			getDay++
+			if v[stockNo].MT.Total > 0 && v[stockNo].SS.Total > 0 {
+				data[overbought] = v[stockNo].MT.Total
+				overbought++
+			}
+		}
+	}
+	if getDay == day {
+		return overbought == day, data
+	} else {
+		return false, nil
+	}
+}
 
 func getT38ByDate(stockNo string, day int) (bool, []int64) {
 	var (
@@ -305,11 +332,12 @@ func getTWSE(category string, minDataNum int) error {
 		if err := prepareStock(stock, minDataNum); err == nil {
 			isT38OverBought, _ := getT38ByDate(v.No, 3)
 			isT44OverBought, _ := getT44ByDate(v.No, 3)
+			isMTSSOverBought, _ := getMTSSByDate(v.No, 1)
 			if res, err := showStock(stock, minDataNum); err == nil {
 				if /*res.todayGain >= 3.5 &&*/
 				res.overMA == true &&
 					isT38OverBought == true &&
-					isT44OverBought == true {
+					isT44OverBought == true && isMTSSOverBought == true {
 					err = csvWriter.Write([]string{v.No,
 						v.Name,
 						fmt.Sprintf("%.2f", res.todayRange),
@@ -318,7 +346,8 @@ func getTWSE(category string, minDataNum int) error {
 						fmt.Sprintf("%.2f", res.NDayAvg),
 						fmt.Sprintf("%t", res.overMA),
 						fmt.Sprintf("%t", isT38OverBought),
-						fmt.Sprintf("%t", isT44OverBought)})
+						fmt.Sprintf("%t", isT44OverBought),
+						fmt.Sprintf("%t", isMTSSOverBought)})
 					if err != nil {
 						return err
 					}
@@ -488,11 +517,19 @@ type TXXData struct {
 func getMTSS(date time.Time) (map[string]twse.BaseMTSS, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	mtss := twse.NewTWMTSS(date, "ALL")
-	v, err := mtss.Get()
+	data, err := mtss.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "Get MTSS Fail")
+		if strings.Contains(err.Error(), "File No Data") {
+			if err := os.Remove(utils.GetMD5FilePath(mtss)); err != nil {
+				return nil, errors.Wrap(err, "Get MTSS Fail")
+			} else {
+				if data, err = mtss.Get(); err != nil {
+					return nil, errors.Wrap(err, "Get MTSS Fail")
+				}
+			}
+		}
 	}
-	return v, nil
+	return data, nil
 }
 func getT38(date time.Time) (map[string]TXXData, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
