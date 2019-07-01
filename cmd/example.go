@@ -171,7 +171,9 @@ var getTWSECmd = &cobra.Command{
 	Short: "Get ALL TWSE",
 	Long:  `Get All Stock of TWSE`,
 	Run: func(cmd *cobra.Command, args []string) {
-		getTWSE("ALLBUT0999", *minDataNumTWSE)
+		if err := getTWSE("ALLBUT0999", *minDataNumTWSE); err != nil{
+			utils.Dbgln(err)
+		}
 	},
 }
 
@@ -268,7 +270,7 @@ func getT38ByDate(stockNo string, day int) (bool, []int64) {
 	data := make([]int64, day)
 	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
-	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i.AddDate(0, 0, -1)) {
 		if v, err := getT38(i); err == nil {
 			getDay++
 			if v[stockNo].Total > 0 {
@@ -291,7 +293,7 @@ func getT44ByDate(stockNo string, day int) (bool, []int64) {
 
 	data := make([]int64, day)
 	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
-	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i.AddDate(0, 0, -1)) {
 		if v, err := getT44(i); err == nil {
 			getDay++
 			if v[stockNo].Total > 0 {
@@ -325,6 +327,11 @@ func getTWSE(category string, minDataNum int) error {
 	//	if err != nil{
 	//		return err
 	//	}
+
+	mtssMapData, err := twse.NewTWMTSS(RecentlyOpendtoday, "ALL").GetData()
+	if err !=nil{
+		return errors.Wrap(err, "MTSS GetData Fail.")
+	}
 	for _, v := range tList {
 		//fmt.Printf("No:%s\n", v.No)
 		stock := twse.NewTWSE(v.No, RecentlyOpendtoday)
@@ -332,7 +339,7 @@ func getTWSE(category string, minDataNum int) error {
 		if err := prepareStock(stock, minDataNum); err == nil {
 			isT38OverBought, _ := getT38ByDate(v.No, 3)
 			isT44OverBought, _ := getT44ByDate(v.No, 3)
-			isMTSSOverBought, _ := getMTSSByDate(v.No, 1)
+			isMTSSOverBought := mtssMapData[v.No].MT.Total>0&&mtssMapData[v.No].SS.Total>0
 			if res, err := showStock(stock, minDataNum); err == nil {
 				if /*res.todayGain >= 3.5 &&*/
 				res.overMA == true &&

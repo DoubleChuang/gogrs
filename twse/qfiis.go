@@ -2,13 +2,17 @@ package twse
 
 import (
 	"encoding/csv"
-	"errors"
+	"github.com/pkg/errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+	"os"
+
+
 
 	"github.com/DoubleChuang/gogrs/utils"
+	"github.com/DoubleChuang/gogrs/tradingdays"
 )
 
 // 錯誤資訊
@@ -193,8 +197,7 @@ func (t TWMTSS) URL() string {
 
 }
 func (t *TWMTSS) Round() {
-	year, month, day := t.Date.Date()
-	t.Date = time.Date(year, month, day-1, 0, 0, 0, 0, t.Date.Location())
+	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0,0,-1))
 }
 
 func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
@@ -214,9 +217,9 @@ func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 	}
 	var csvArrayContent = strings.Split(string(data), "\n")
 	if len(csvArrayContent) < 14 {
-		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
 			return nil, err
-		}*/
+		}
 		return nil, errorFileNoData
 	}
 	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
@@ -257,12 +260,25 @@ func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 	return resultMap, err
 }
 
+func (t *TWMTSS)GetData()(map[string]BaseMTSS, error) {
+	if v, err := t.Get(); err ==nil{
+		return v, err
+	}else{
+		t.Round()
+		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+		return t.GetData()
+	}
+}
+
 // TWTXXU 產生 自營商、投信、外資及陸資買賣超彙總表
 type TWTXXU struct {
 	Date time.Time
 	fund string
 }
-
+func (t *TWTXXU) Round() {
+	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0,0,-1))
+}
 // NewTWT38U 外資及陸資買賣超彙總表
 func NewTWT38U(date time.Time) *TWTXXU {
 	return &TWTXXU{Date: date, fund: "TWT38U"}
