@@ -23,4 +23,5 @@
     [Done] prepareStock 修改成回err而不是bool
 # 9 
 	[ErrorHandler](https://github.com/EthanCai/goErrorHandlingSample)
-
+#10 
+	自動抓完發到LINE message 或是傳Email
