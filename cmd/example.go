@@ -38,8 +38,11 @@ import (
 )
 
 var minDataNum *int
-var minDataNumTWSE *int
-var minDataNumTPEX *int
+var useMtss *bool
+var useT38 *bool
+var useT44 *bool
+var useMa *bool
+var useCp *bool
 
 var OTCCLASS = map[string]string{
 	"02": "食品工業",
@@ -171,7 +174,7 @@ var getTWSECmd = &cobra.Command{
 	Short: "Get ALL TWSE",
 	Long:  `Get All Stock of TWSE`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := getTWSE("ALLBUT0999", *minDataNumTWSE); err != nil{
+		if err := getTWSE("ALLBUT0999", *minDataNum); err != nil {
 			utils.Dbgln(err)
 		}
 	},
@@ -183,7 +186,7 @@ var getTPEXCmd = &cobra.Command{
 	Long:  `Get All Stock of TPEX`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		getOTC("EW", *minDataNumTPEX)
+		getOTC("EW", *minDataNum)
 	},
 }
 var getT38Cmd = &cobra.Command{
@@ -329,7 +332,7 @@ func getTWSE(category string, minDataNum int) error {
 	//	}
 
 	mtssMapData, err := twse.NewTWMTSS(RecentlyOpendtoday, "ALL").GetData()
-	if err !=nil{
+	if err != nil {
 		return errors.Wrap(err, "MTSS GetData Fail.")
 	}
 	for _, v := range tList {
@@ -339,12 +342,13 @@ func getTWSE(category string, minDataNum int) error {
 		if err := prepareStock(stock, minDataNum); err == nil {
 			isT38OverBought, _ := getT38ByDate(v.No, 3)
 			isT44OverBought, _ := getT44ByDate(v.No, 3)
-			isMTSSOverBought := mtssMapData[v.No].MT.Total>0&&mtssMapData[v.No].SS.Total>0
+			isMTSSOverBought := mtssMapData[v.No].MT.Total > 0 && mtssMapData[v.No].SS.Total > 0
 			if res, err := showStock(stock, minDataNum); err == nil {
-				if /*res.todayGain >= 3.5 &&*/
-				res.overMA == true &&
-					isT38OverBought == true &&
-					isT44OverBought == true && isMTSSOverBought == true {
+				if (res.todayGain >= 3.5 && *useCp) &&
+					(res.overMA == true && *useMa) &&
+					(isT38OverBought == true && *useT38) &&
+					(isT44OverBought == true && *useT44) &&
+					(isMTSSOverBought == true && *useMtss) {
 					err = csvWriter.Write([]string{v.No,
 						v.Name,
 						fmt.Sprintf("%.2f", res.todayRange),
@@ -677,10 +681,10 @@ func showAll(stock *twse.Data) {
 }
 
 func init() {
-	minDataNum = getAllStockCmd.Flags().IntP("num", "n", 3, "min date num")
+	/*minDataNum = getAllStockCmd.Flags().IntP("num", "n", 3, "min date num")
 
 	minDataNumTWSE = getTWSECmd.Flags().IntP("num", "n", 3, "min date num")
-	minDataNumTPEX = getTPEXCmd.Flags().IntP("num", "n", 3, "min date num")
+	minDataNumTPEX = getTPEXCmd.Flags().IntP("num", "n", 3, "min date num")*/
 	//minDataNum = RootCmd.Flags().IntP("num", "n", 3, "min date num")
 	RootCmd.AddCommand(exampleCmd)
 	RootCmd.AddCommand(testCmd)
@@ -690,6 +694,13 @@ func init() {
 	RootCmd.AddCommand(getT38Cmd)
 	RootCmd.AddCommand(getT44Cmd)
 
+	minDataNum = RootCmd.PersistentFlags().IntP("num", "n", 3, "min date num")
+	useMtss = RootCmd.PersistentFlags().BoolP("mtss", "m", true, "使用融資融券篩選")
+	useT38 = RootCmd.PersistentFlags().BoolP("fi", "f", true, "使用外資篩選")
+	useT44 = RootCmd.PersistentFlags().BoolP("it", "i", true, "使用投信篩選")
+	useMa = RootCmd.PersistentFlags().BoolP("ma", "M", true, "使用移動平均篩選")
+	useCp = RootCmd.PersistentFlags().BoolP("cp" /*closing price*/, "c", true, "使用收盤價篩選")
+	//useMa = RootCmd.PersistentFlags().BoolP("c", "cp"/*closing price*/, true, "使用收盤價篩選")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
