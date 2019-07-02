@@ -270,7 +270,7 @@ func getT38ByDate(stockNo string, day int) (bool, []int64) {
 	data := make([]int64, day)
 	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
-	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i.AddDate(0, 0, -1)) {
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i) {
 		if v, err := getT38(i); err == nil {
 			getDay++
 			if v[stockNo].Total > 0 {
@@ -293,7 +293,7 @@ func getT44ByDate(stockNo string, day int) (bool, []int64) {
 
 	data := make([]int64, day)
 	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
-	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i.AddDate(0, 0, -1)) {
+	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i) {
 		if v, err := getT44(i); err == nil {
 			getDay++
 			if v[stockNo].Total > 0 {
