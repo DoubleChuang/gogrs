@@ -211,7 +211,7 @@ func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 		err       error
 		resultMap map[string]BaseMTSS
 	)
-	fmt.Println(t.URL())
+	//fmt.Println(t.URL())
 	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
 		return nil, err
 	}

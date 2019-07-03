@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+
 	iconv "github.com/djimenez/iconv-go"
 )
 
@@ -39,7 +40,23 @@ type HTTPCache struct {
 	fullpath       string
 	iconvConverter func([]byte) []byte
 }
+func Dbgln(args ...interface{}) {
+	programCounter, _, line, _ := runtime.Caller(1)
+	fn := runtime.FuncForPC(programCounter)
+	//prefix := fmt.Sprintf("[%s:%s %d] %s", file, fn.Name(), line, fmt_)
+	prefix := fmt.Sprintf("[%s %d]", fn.Name(), line)
 
+	fmt.Printf("%s", prefix)
+	fmt.Println(args...)
+}
+func Dbg(fmt_ string, args ...interface{}) {
+	programCounter, _, line, _ := runtime.Caller(1)
+	fn := runtime.FuncForPC(programCounter)
+	//prefix := fmt.Sprintf("[%s:%s %d] %s", file, fn.Name(), line, fmt_)
+	prefix := fmt.Sprintf("[%s %d] %s", fn.Name(), line, fmt_)
+	fmt.Printf(prefix, args...)
+	fmt.Println()
+}
 // NewHTTPCache New 一個 HTTPCache.
 //
 // dir 為暫存位置，fromEncoding 來源檔案的編碼，一律轉換為 utf8
@@ -108,7 +125,7 @@ func (hc HTTPCache) Get(url string, rand bool) ([]byte, error) {
 		err     error
 	)
 
-	fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
+	//fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime(whereUrl(url))
 		return hc.saveFile(url, filehash, rand, nil)
@@ -129,7 +146,7 @@ func (hc HTTPCache) PostForm(url string, data url.Values) ([]byte, error) {
 
 	filehash := fmt.Sprintf("%x", hash.Sum(nil))
 
-	fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
+	//Dbg("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime(whereUrl(url))
 

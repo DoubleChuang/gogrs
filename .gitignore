@@ -1,3 +1,6 @@
 *.out
 *.test
 *.cov
+*.csv
+*.xlsx
+main

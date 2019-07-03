@@ -194,7 +194,9 @@ func NewLists(t time.Time) *Lists {
 		categoryNoList:  make(map[string][]StockInfo),
 	}
 }
-
+func (l Lists) Url()string{
+	return fmt.Sprintf("%s%s", utils.TWSEHOST, fmt.Sprintf(utils.TWSELISTCSV, l.Date.Year(), l.Date.Month(), l.Date.Day(), "ALL"))
+}
 // Get is to get TWSE csv data.
 func (l *Lists) Get(category string) ([][]string, error) {
 	if TWSECLASS[category] == "" {

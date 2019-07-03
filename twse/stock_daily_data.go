@@ -2,13 +2,13 @@ package twse
 
 import (
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
+	
+	"github.com/pkg/errors"
 	"github.com/DoubleChuang/gogrs/utils"
 )
 
@@ -103,7 +103,7 @@ func (d *Data) Get() ([][]string, error) {
 	if len(d.UnixMapData[monthDateUnix]) == 0 {
 		var data []byte
 		var err error
-		fmt.Println(d.URL())
+		//fmt.Println(d.URL())
 		switch d.exchange {
 		case "tse":
 			data, err = hCache.PostForm(d.URL(), nil)
@@ -126,8 +126,8 @@ func (d *Data) Get() ([][]string, error) {
 					if(len(groups)>=2){
 						d.No, d.Name = groups[1], groups[2]
 					}else{
-						fmt.Println("errorNotEnoughData")
-						return nil, errorNotEnoughData
+						//fmt.Println("errorNotEnoughData")
+						return nil, errors.WithMessage(errorNotEnoughData, utils.GetMD5FilePath(d))
 					}
 				}
 				var datalist []string
@@ -149,7 +149,8 @@ func (d *Data) Get() ([][]string, error) {
 			d.clearCache()
 			return allData, err
 		}
-		return nil, errorNotEnoughData
+		return nil, errors.WithMessage(errorNotEnoughData,
+		     utils.GetMD5FilePath(d))
 	}
 	return d.UnixMapData[monthDateUnix], nil
 }

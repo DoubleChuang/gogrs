@@ -36,13 +36,14 @@ import (
 	"github.com/DoubleChuang/gogrs/utils"
 	"github.com/spf13/cobra"
 )
-
+const shortForm = "20060102"
 var minDataNum *int
 var useMtss *bool
 var useT38 *bool
 var useT44 *bool
 var useMa *bool
 var useCp *bool
+var useDate *string
 
 var OTCCLASS = map[string]string{
 	"02": "食品工業",
@@ -161,9 +162,9 @@ var getAllStockCmd = &cobra.Command{
 		//getTWSE("ALLBUT0999", *minDataNum)
 		//getTWSE("26", *minDataNum)
 		//getOTC("EW", *minDataNum)
-		if v, err := getMTSS(tradingdays.FindRecentlyOpened(time.Now())); err == nil {
+		/*if v, err := getMTSS(tradingdays.FindRecentlyOpened(time.Now())); err == nil {
 			utils.Dbgln(v)
-		}
+		}*/
 		//isMTSSOverBought, _ := getMTSSByDate("1215", 1)
 		//fmt.Println(isMTSSOverBought)
 	},
@@ -271,7 +272,8 @@ func getT38ByDate(stockNo string, day int) (bool, []int64) {
 	)
 
 	data := make([]int64, day)
-	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday, _ := time.Parse(shortForm, *useDate)
 	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
 	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i) {
 		if v, err := getT38(i); err == nil {
@@ -295,7 +297,8 @@ func getT44ByDate(stockNo string, day int) (bool, []int64) {
 	)
 
 	data := make([]int64, day)
-	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday, _ := time.Parse(shortForm, *useDate)
 	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = tradingdays.FindRecentlyOpened(i) {
 		if v, err := getT44(i); err == nil {
 			getDay++
@@ -314,12 +317,16 @@ func getT44ByDate(stockNo string, day int) (bool, []int64) {
 
 func getTWSE(category string, minDataNum int) error {
 
-	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday, _ := time.Parse(shortForm, *useDate)
+	utils.Dbgln(RecentlyOpendtoday)
+
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+
 	t := twse.NewLists(RecentlyOpendtoday)
 	tList := t.GetCategoryList(category)
 	year, month, day := RecentlyOpendtoday.Date()
 
-	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_CREATE|os.O_RDWR, 0666)
 	defer csvFile.Close()
 	if err != nil {
 		utils.Dbg("error: %s\n", err)
@@ -340,15 +347,39 @@ func getTWSE(category string, minDataNum int) error {
 		stock := twse.NewTWSE(v.No, RecentlyOpendtoday)
 		//checkFirstDayOfMonth(stock)
 		if err := prepareStock(stock, minDataNum); err == nil {
+			var output bool = true
 			isT38OverBought, _ := getT38ByDate(v.No, 3)
 			isT44OverBought, _ := getT44ByDate(v.No, 3)
 			isMTSSOverBought := mtssMapData[v.No].MT.Total > 0 && mtssMapData[v.No].SS.Total > 0
 			if res, err := showStock(stock, minDataNum); err == nil {
-				if (res.todayGain >= 3.5 && *useCp) &&
-					(res.overMA == true && *useMa) &&
-					(isT38OverBought == true && *useT38) &&
-					(isT44OverBought == true && *useT44) &&
-					(isMTSSOverBought == true && *useMtss) {
+				if(*useCp){ 
+					if(res.todayGain >= 3.5){
+						output = true
+					}else{
+						output = false
+					}
+				}
+				if(*useMa){
+					if(!res.overMA){
+						output = false
+					}
+				}
+				if(*useT38){
+					if(!isT38OverBought){
+						output = false
+					}
+				}
+				if(*useT44){
+					if(!isT44OverBought){
+						output = false
+					}
+				}
+				if(*useMtss){
+					if(!isMTSSOverBought){
+						output = false
+					}
+				}
+				if(output){
 					err = csvWriter.Write([]string{v.No,
 						v.Name,
 						fmt.Sprintf("%.2f", res.todayRange),
@@ -367,16 +398,19 @@ func getTWSE(category string, minDataNum int) error {
 					if err != nil {
 						return err
 					}
+					fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t T44OverBought:%t MTSSOverBought:%t\n",
+						v.No,
+						res.todayRange,
+						res.todayPrice,
+						res.todayGain,
+						res.NDayAvg,
+						res.overMA,
+						isT38OverBought,
+						isT44OverBought,
+						isMTSSOverBought)
 				}
 
-				fmt.Printf("No: %6s Range: %.2f Price: %.2f Gain: %.2f%% NDayAvg:%.2f overMA:%t\n",
-					v.No,
-					res.todayRange,
-					res.todayPrice,
-					res.todayGain,
-					res.NDayAvg,
-					res.overMA,
-				)
+				
 			}
 		} else {
 			fmt.Println(err)
@@ -689,17 +723,23 @@ func init() {
 	RootCmd.AddCommand(exampleCmd)
 	RootCmd.AddCommand(testCmd)
 	RootCmd.AddCommand(getAllStockCmd)
-	RootCmd.AddCommand(getTWSECmd)
-	RootCmd.AddCommand(getTPEXCmd)
+	//RootCmd.AddCommand(getTWSECmd)
+	//RootCmd.AddCommand(getTPEXCmd)
 	RootCmd.AddCommand(getT38Cmd)
 	RootCmd.AddCommand(getT44Cmd)
+	//RootCmd.AddCommand(getStockCmd)
 
-	minDataNum = RootCmd.PersistentFlags().IntP("num", "n", 3, "min date num")
-	useMtss = RootCmd.PersistentFlags().BoolP("mtss", "m", true, "使用融資融券篩選")
-	useT38 = RootCmd.PersistentFlags().BoolP("fi", "f", true, "使用外資篩選")
-	useT44 = RootCmd.PersistentFlags().BoolP("it", "i", true, "使用投信篩選")
-	useMa = RootCmd.PersistentFlags().BoolP("ma", "M", true, "使用移動平均篩選")
-	useCp = RootCmd.PersistentFlags().BoolP("cp" /*closing price*/, "c", true, "使用收盤價篩選")
+	minDataNum = getAllStockCmd.PersistentFlags().IntP("num", "N", 3, "min date num")
+	useMtss = getAllStockCmd.PersistentFlags().BoolP("mtss", "m", false, "使用融資融券篩選")
+	useT38 = getAllStockCmd.PersistentFlags().BoolP("fi", "f", false, "使用外資篩選")
+	useT44 = getAllStockCmd.PersistentFlags().BoolP("it", "i", false, "使用投信篩選")
+	useMa = getAllStockCmd.PersistentFlags().BoolP("ma", "M", false, "使用移動平均篩選")
+	useCp = getAllStockCmd.PersistentFlags().BoolP("cp" /*closing price*/, "c", false, "使用收盤價篩選")
+	date:=tradingdays.FindRecentlyOpened(time.Now()).Format(shortForm)
+	useDate = getAllStockCmd.PersistentFlags().StringP("date" , "d", date ,"使用自訂日期")
+
+	getAllStockCmd.AddCommand(getTPEXCmd)
+	getAllStockCmd.AddCommand(getTWSECmd)
 	//useMa = RootCmd.PersistentFlags().BoolP("c", "cp"/*closing price*/, true, "使用收盤價篩選")
 	// Here you will define your flags and configuration settings.
 
