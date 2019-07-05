@@ -151,11 +151,17 @@ var exampleCmd = &cobra.Command{
 	},
 }
 
+
+
 var getAllStockCmd = &cobra.Command{
 	Use:   "ga",
 	Short: "Get all stock",
 	Long:  `Get All.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		if err := utils.RecoveryStockBackup(*useDate);err != nil {
+			utils.Dbgln(err)
+		}
 		//getT38(tradingdays.FindRecentlyOpened(time.Now()))
 		//getT44(tradingdays.FindRecentlyOpened(time.Now()))
 
