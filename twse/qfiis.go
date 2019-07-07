@@ -2,17 +2,16 @@ package twse
 
 import (
 	"encoding/csv"
-	"github.com/pkg/errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-	"os"
 
+	"github.com/pkg/errors"
 
-
-	"github.com/DoubleChuang/gogrs/utils"
 	"github.com/DoubleChuang/gogrs/tradingdays"
+	"github.com/DoubleChuang/gogrs/utils"
 )
 
 // 錯誤資訊
@@ -197,7 +196,12 @@ func (t TWMTSS) URL() string {
 
 }
 func (t *TWMTSS) Round() {
-	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0,0,-1))
+	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+}
+
+func (t *TWMTSS) SetDate(date time.Time) *TWMTSS {
+	t.Date = tradingdays.FindRecentlyOpened(date)
+	return t
 }
 
 func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
@@ -260,13 +264,13 @@ func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 	return resultMap, err
 }
 
-func (t *TWMTSS)GetData()(map[string]BaseMTSS, error) {
-	if v, err := t.Get(); err ==nil{
+func (t *TWMTSS) GetData() (map[string]BaseMTSS, error) {
+	if v, err := t.Get(); err == nil {
 		return v, err
-	}else{
+	} else {
 		t.Round()
 		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
-			return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+		return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
 		return t.GetData()
 	}
 }
@@ -276,9 +280,11 @@ type TWTXXU struct {
 	Date time.Time
 	fund string
 }
+
 func (t *TWTXXU) Round() {
-	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0,0,-1))
+	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
 }
+
 // NewTWT38U 外資及陸資買賣超彙總表
 func NewTWT38U(date time.Time) *TWTXXU {
 	return &TWTXXU{Date: date, fund: "TWT38U"}
