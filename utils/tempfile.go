@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"archive/tar"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -14,8 +15,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"archive/tar"
-
 
 	iconv "github.com/djimenez/iconv-go"
 )
@@ -41,6 +40,7 @@ type HTTPCache struct {
 	fullpath       string
 	iconvConverter func([]byte) []byte
 }
+
 func Dbgln(args ...interface{}) {
 	programCounter, _, line, _ := runtime.Caller(1)
 	fn := runtime.FuncForPC(programCounter)
@@ -58,6 +58,7 @@ func Dbg(fmt_ string, args ...interface{}) {
 	fmt.Printf(prefix, args...)
 	fmt.Println()
 }
+
 // NewHTTPCache New 一個 HTTPCache.
 //
 // dir 為暫存位置，fromEncoding 來源檔案的編碼，一律轉換為 utf8
@@ -232,8 +233,8 @@ func (hc HTTPCache) saveFile(url, filehash string, rand bool, data url.Values) (
 
 		out = hc.iconvConverter(content)
 		f.Write(out)
-	}else{
-		return  out, fmt.Errorf("Fail Get File: [%d] %s\n", resp.StatusCode, url)
+	} else {
+		return out, fmt.Errorf("Fail Get File: [%d] %s\n", resp.StatusCode, url)
 	}
 
 	return out, err
@@ -269,28 +270,27 @@ func GetOSRamdiskPath(goos string) string {
 	}
 }
 
-
 func DownloadFile(filepath string, url string) error {
 
-    // Get the data
-    resp, err := http.Get(url)
-    if err != nil {
-        return err
-    }
-    defer resp.Body.Close()
-	if status := resp.StatusCode; status < 200 || status >= 300{
-		return	fmt.Errorf("Fail Get File: [%d] %s\n", status, url)
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
 	}
-    // Create the file
-    out, err := os.Create(filepath)
-    if err != nil {
-        return err
-    }
-    defer out.Close()
+	defer resp.Body.Close()
+	if status := resp.StatusCode; status < 200 || status >= 300 {
+		return fmt.Errorf("Fail Get File: [%d] %s\n", status, url)
+	}
+	// Create the file
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
 
-    // Write the body to file
-    _, err = io.Copy(out, resp.Body)
-    return err
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 func Untar(dst string, r io.Reader) error {
@@ -351,26 +351,30 @@ func Untar(dst string, r io.Reader) error {
 			if _, err := io.Copy(f, tr); err != nil {
 				return err
 			}
-			
+
 			// manually close here after each file operation; defering would cause each file close
 			// to wait until all operations have completed.
 			f.Close()
 		}
 	}
 }
-func RecoveryStockBackup(date string) error{
-	srcUrl := fmt.Sprintf("https://github.com/DoubleChuang/gogrs/raw/master/STOCK_DATA_BACKUP/%s.tar", date)
+func RecoveryStockBackup(date string) error {
 	dstFilePath := fmt.Sprintf("./dl_%s.tar", date)
-	if err := DownloadFile(dstFilePath, srcUrl);err!=nil{
-		return err
-	}
-	
-	if file, err := os.Open(dstFilePath);err == nil{
-		defer file.Close()
-		var fileReader io.ReadCloser = file
-		Untar("/", fileReader)
-	}else{
-		return err
+	if _, err := os.Stat(dstFilePath); os.IsNotExist(err) {
+		// file does not exist
+		srcUrl := fmt.Sprintf("https://github.com/DoubleChuang/gogrs/raw/master/STOCK_DATA_BACKUP/%s.tar", date)
+
+		if err := DownloadFile(dstFilePath, srcUrl); err != nil {
+			return err
+		}
+
+		if file, err := os.Open(dstFilePath); err == nil {
+			defer file.Close()
+			var fileReader io.ReadCloser = file
+			Untar("/", fileReader)
+		} else {
+			return err
+		}
 	}
 	return nil
 }
