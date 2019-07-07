@@ -7,6 +7,9 @@ BACKUP_DIR=$(PWD)/STOCK_DATA_BACKUP
 
 .PHONY: backup recovery
 
+all:
+	@go build main.go
+
 backup:
 	@tar cf $(BACKUP_DIR)/$(TIME).tar $(TARGET_DIR)
 recovery:
