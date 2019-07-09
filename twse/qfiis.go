@@ -233,19 +233,19 @@ func (t *TWMTSS) Round() {
 }
 
 func (t *TWMTSS) SetDate(date time.Time) *TWMTSS {
-	t.Date = tradingdays.FindRecentlyOpened(date)
+	t.Date = date
 	return t
 }
 func (t *TWT38U) SetDate(date time.Time) *TWT38U {
-	t.Date = tradingdays.FindRecentlyOpened(date)
+	t.Date = date
 	return t
 }
 func (t *TWT43U) SetDate(date time.Time) *TWT43U {
-	t.Date = tradingdays.FindRecentlyOpened(date)
+	t.Date = date
 	return t
 }
 func (t *TWT44U) SetDate(date time.Time) *TWT44U {
-	t.Date = tradingdays.FindRecentlyOpened(date)
+	t.Date = date
 	return t
 }
 
@@ -439,19 +439,19 @@ type TWTXXU struct {
 }
 
 func (t *TWTXXU) Round() {
-	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+	t.Date = tradingdays.FindRecentlyOpened(t.Date)
 }
 
 func (t *TWT38U) Round() {
-	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+	t.Date = tradingdays.FindRecentlyOpened(t.Date)
 }
 
 func (t *TWT43U) Round() {
-	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+	t.Date = tradingdays.FindRecentlyOpened(t.Date)
 }
 
 func (t *TWT44U) Round() {
-	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+	t.Date = tradingdays.FindRecentlyOpened(t.Date)
 }
 
 // NewTWT38U 外資及陸資買賣超彙總表
