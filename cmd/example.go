@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -36,7 +35,9 @@ import (
 	"github.com/DoubleChuang/gogrs/utils"
 	"github.com/spf13/cobra"
 )
+
 const shortForm = "20060102"
+
 var minDataNum *int
 var useMtss *bool
 var useT38 *bool
@@ -44,6 +45,10 @@ var useT44 *bool
 var useMa *bool
 var useCp *bool
 var useDate *string
+
+var gT38U *twse.TWT38U
+var gT43U *twse.TWT43U
+var gT44U *twse.TWT44U
 
 var OTCCLASS = map[string]string{
 	"02": "食品工業",
@@ -151,15 +156,13 @@ var exampleCmd = &cobra.Command{
 	},
 }
 
-
-
 var getAllStockCmd = &cobra.Command{
 	Use:   "ga",
 	Short: "Get all stock",
 	Long:  `Get All.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		if err := utils.RecoveryStockBackup(*useDate);err != nil {
+		if err := utils.RecoveryStockBackup(*useDate); err != nil {
 			utils.Dbgln(err)
 		}
 		//getT38(tradingdays.FindRecentlyOpened(time.Now()))
@@ -202,8 +205,7 @@ var getT38Cmd = &cobra.Command{
 	Long:  `Get All Stock of Foreign Investor`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		getT38(tradingdays.FindRecentlyOpened(time.Now()))
-		getT38(tradingdays.FindRecentlyOpened(time.Now()))
+		gT38U.GetData()
 	},
 }
 var getT44Cmd = &cobra.Command{
@@ -212,9 +214,7 @@ var getT44Cmd = &cobra.Command{
 	Long:  `Get All Stock of Investment Trust`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if v, err := getT44(tradingdays.FindRecentlyOpened(time.Now())); err == nil {
-			utils.Dbg("%v\n", v)
-		}
+		gT44U.GetData()
 
 	},
 }
@@ -246,32 +246,7 @@ var (
 	T44DataMap map[time.Time]map[string]TXXData = make(map[time.Time]map[string]TXXData)
 )
 
-func getMTSSByDate(stockNo string, day int) (bool, []int64) {
-	var (
-		overbought int
-		getDay     int
-	)
-
-	data := make([]int64, day)
-	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
-	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
-	for i := RecentlyOpendtoday; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(i) && getDay < day; i = i.AddDate(0, 0, -1) {
-		if v, err := getMTSS(i); err == nil {
-			getDay++
-			if v[stockNo].MT.Total > 0 && v[stockNo].SS.Total > 0 {
-				data[overbought] = v[stockNo].MT.Total
-				overbought++
-			}
-		}
-	}
-	if getDay == day {
-		return overbought == day, data
-	} else {
-		return false, nil
-	}
-}
-
-func getT38ByDate(stockNo string, day int) (bool, []int64) {
+/*func getT38ByDate(stockNo string, day int) (bool, []int64) {
 	var (
 		overbought int
 		getDay     int
@@ -319,7 +294,7 @@ func getT44ByDate(stockNo string, day int) (bool, []int64) {
 	} else {
 		return false, nil
 	}
-}
+}*/
 
 func getTWSE(category string, minDataNum int) error {
 
@@ -348,44 +323,54 @@ func getTWSE(category string, minDataNum int) error {
 	if err != nil {
 		return errors.Wrap(err, "MTSS GetData Fail.")
 	}
+	gT38U = twse.NewTWT38U(RecentlyOpendtoday)
+	if err != nil {
+		return errors.Wrap(err, "MTSS GetData Fail.")
+	}
+
+	gT44U = twse.NewTWT44U(RecentlyOpendtoday)
+	if err != nil {
+		return errors.Wrap(err, "MTSS GetData Fail.")
+	}
+
 	for _, v := range tList {
 		//fmt.Printf("No:%s\n", v.No)
 		stock := twse.NewTWSE(v.No, RecentlyOpendtoday)
 		//checkFirstDayOfMonth(stock)
 		if err := prepareStock(stock, minDataNum); err == nil {
 			var output bool = true
-			isT38OverBought, _ := getT38ByDate(v.No, 3)
-			isT44OverBought, _ := getT44ByDate(v.No, 3)
+			isT38OverBought, _ := gT38U.IsOverBoughtDates(v.No, 3)
+			isT44OverBought, _ := gT44U.IsOverBoughtDates(v.No, 3)
 			isMTSSOverBought := mtssMapData[v.No].MT.Total > 0 && mtssMapData[v.No].SS.Total > 0
 			if res, err := showStock(stock, minDataNum); err == nil {
-				if(*useCp){ 
-					if(res.todayGain >= 3.5){
+				if *useCp {
+					if res.todayGain >= 3.5 {
 						output = true
-					}else{
+					} else {
 						output = false
 					}
 				}
-				if(*useMa){
-					if(!res.overMA){
+				if *useMa {
+					if !res.overMA {
 						output = false
 					}
 				}
-				if(*useT38){
-					if(!isT38OverBought){
+				if *useT38 {
+					if !isT38OverBought {
 						output = false
 					}
 				}
-				if(*useT44){
-					if(!isT44OverBought){
+				if *useT44 {
+					if !isT44OverBought {
 						output = false
 					}
 				}
-				if(*useMtss){
-					if(!isMTSSOverBought){
+				if *useMtss {
+					if !isMTSSOverBought {
 						output = false
 					}
 				}
-				if(output){
+				if output {
 					err = csvWriter.Write([]string{v.No,
 						v.Name,
 						fmt.Sprintf("%.2f", res.todayRange),
@@ -416,7 +401,6 @@ func getTWSE(category string, minDataNum int) error {
 						isMTSSOverBought)
 				}
 
-				
 			}
 		} else {
 			fmt.Println(err)
@@ -565,24 +549,7 @@ type TXXData struct {
 	Total int64
 }
 
-func getMTSS(date time.Time) (map[string]twse.BaseMTSS, error) {
-	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
-	mtss := twse.NewTWMTSS(date, "ALL")
-	data, err := mtss.Get()
-	if err != nil {
-		if strings.Contains(err.Error(), "File No Data") {
-			if err := os.Remove(utils.GetMD5FilePath(mtss)); err != nil {
-				return nil, errors.Wrap(err, "Get MTSS Fail")
-			} else {
-				if data, err = mtss.Get(); err != nil {
-					return nil, errors.Wrap(err, "Get MTSS Fail")
-				}
-			}
-		}
-	}
-	return data, nil
-}
-func getT38(date time.Time) (map[string]TXXData, error) {
+/*func getT38(date time.Time) (map[string]TXXData, error) {
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	if v, ok := T38DataMap[date]; ok {
 		//utils.Dbg("Reuse T38Data:%v\n", date)
@@ -677,7 +644,7 @@ func getT44(date time.Time) (map[string]TXXData, error) {
 	//fmt.Println(t44Map)
 	T44DataMap[date] = t44Map
 	return t44Map, nil
-}
+}*/
 
 func showMyAll(stock *twse.Data) {
 	rangeList := stock.GetRangeList()
@@ -741,8 +708,8 @@ func init() {
 	useT44 = getAllStockCmd.PersistentFlags().BoolP("it", "i", false, "使用投信篩選")
 	useMa = getAllStockCmd.PersistentFlags().BoolP("ma", "M", false, "使用移動平均篩選")
 	useCp = getAllStockCmd.PersistentFlags().BoolP("cp" /*closing price*/, "c", false, "使用收盤價篩選")
-	date:=tradingdays.FindRecentlyOpened(time.Now()).Format(shortForm)
-	useDate = getAllStockCmd.PersistentFlags().StringP("date" , "d", date ,"使用自訂日期")
+	date := tradingdays.FindRecentlyOpened(time.Now()).Format(shortForm)
+	useDate = getAllStockCmd.PersistentFlags().StringP("date", "d", date, "使用自訂日期")
 
 	getAllStockCmd.AddCommand(getTPEXCmd)
 	getAllStockCmd.AddCommand(getTWSECmd)

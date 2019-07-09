@@ -161,6 +161,9 @@ func (t T86) Get(cate string) ([]T86Data, error) {
 }
 
 type unixMapMTSSData map[int64]map[string]BaseMTSS
+type unixMapT38UData map[int64]map[string]BaseT38U
+type unixMapT43UData map[int64]map[string]BaseT43U
+type unixMapT44UData map[int64]map[string]BaseT44U
 
 type TradingVolume struct {
 	Buy   int64 // 買進
@@ -172,6 +175,36 @@ type BaseMTSS struct {
 	Name string
 	MT   TradingVolume
 	SS   TradingVolume
+}
+type BaseT38U struct {
+	No     string
+	Name   string
+	Volume TradingVolume
+}
+
+type BaseT43U struct {
+	No     string
+	Name   string
+	Volume TradingVolume
+}
+
+type BaseT44U struct {
+	No     string
+	Name   string
+	Volume TradingVolume
+}
+
+type TWT38U struct {
+	Date            time.Time
+	UnixMapT38UData unixMapT38UData
+}
+type TWT43U struct {
+	Date            time.Time
+	UnixMapT43UData unixMapT43UData
+}
+type TWT44U struct {
+	Date            time.Time
+	UnixMapT44UData unixMapT44UData
 }
 
 type TWMTSS struct {
@@ -200,6 +233,18 @@ func (t *TWMTSS) Round() {
 }
 
 func (t *TWMTSS) SetDate(date time.Time) *TWMTSS {
+	t.Date = tradingdays.FindRecentlyOpened(date)
+	return t
+}
+func (t *TWT38U) SetDate(date time.Time) *TWT38U {
+	t.Date = tradingdays.FindRecentlyOpened(date)
+	return t
+}
+func (t *TWT43U) SetDate(date time.Time) *TWT43U {
+	t.Date = tradingdays.FindRecentlyOpened(date)
+	return t
+}
+func (t *TWT44U) SetDate(date time.Time) *TWT44U {
 	t.Date = tradingdays.FindRecentlyOpened(date)
 	return t
 }
@@ -274,6 +319,118 @@ func (t *TWMTSS) GetData() (map[string]BaseMTSS, error) {
 		return t.GetData()
 	}
 }
+func (t *TWT38U) GetData() (map[string]BaseT38U, error) {
+	if v, err := t.Get(); err == nil {
+		return v, err
+	} else {
+		t.Round()
+		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+		return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+		return t.GetData()
+	}
+}
+
+func (t *TWT43U) GetData() (map[string]BaseT43U, error) {
+	if v, err := t.Get(); err == nil {
+		return v, err
+	} else {
+		t.Round()
+		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+		return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+		return t.GetData()
+	}
+}
+func (t *TWT44U) GetData() (map[string]BaseT44U, error) {
+	if v, err := t.Get(); err == nil {
+		return v, err
+	} else {
+		t.Round()
+		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+		return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+		return t.GetData()
+	}
+}
+func (t *TWT38U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
+	var (
+		overbought int
+		getDay     int
+	)
+
+	data := make([]int64, day)
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday := t.Date
+	bkDate := t.Date
+	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(t.Date) && getDay < day; t.Round() {
+		if v, err := t.GetData(); err == nil {
+			getDay++
+			if v[stockNo].Volume.Total > 0 {
+				data[overbought] = v[stockNo].Volume.Total
+				overbought++
+			}
+		}
+	}
+	t.SetDate(bkDate)
+	if getDay == day {
+		return overbought == day, data
+	} else {
+		return false, nil
+	}
+}
+func (t *TWT43U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
+	var (
+		overbought int
+		getDay     int
+	)
+
+	data := make([]int64, day)
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday := t.Date
+	bkDate := t.Date
+	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(t.Date) && getDay < day; t.Round() {
+		if v, err := t.GetData(); err == nil {
+			getDay++
+			if v[stockNo].Volume.Total > 0 {
+				data[overbought] = v[stockNo].Volume.Total
+				overbought++
+			}
+		}
+	}
+	t.SetDate(bkDate)
+	if getDay == day {
+		return overbought == day, data
+	} else {
+		return false, nil
+	}
+}
+func (t *TWT44U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
+	var (
+		overbought int
+		getDay     int
+	)
+
+	data := make([]int64, day)
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday := t.Date
+	bkDate := t.Date
+	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(t.Date) && getDay < day; t.Round() {
+		if v, err := t.GetData(); err == nil {
+			getDay++
+			if v[stockNo].Volume.Total > 0 {
+				data[overbought] = v[stockNo].Volume.Total
+				overbought++
+			}
+		}
+	}
+	t.SetDate(bkDate)
+	if getDay == day {
+		return overbought == day, data
+	} else {
+		return false, nil
+	}
+}
 
 // TWTXXU 產生 自營商、投信、外資及陸資買賣超彙總表
 type TWTXXU struct {
@@ -285,27 +442,59 @@ func (t *TWTXXU) Round() {
 	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
 }
 
+func (t *TWT38U) Round() {
+	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+}
+
+func (t *TWT43U) Round() {
+	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+}
+
+func (t *TWT44U) Round() {
+	t.Date = tradingdays.FindRecentlyOpened(t.Date.AddDate(0, 0, -1))
+}
+
 // NewTWT38U 外資及陸資買賣超彙總表
-func NewTWT38U(date time.Time) *TWTXXU {
-	return &TWTXXU{Date: date, fund: "TWT38U"}
+func NewTWT38U(date time.Time) *TWT38U {
+	return &TWT38U{
+		Date:            date,
+		UnixMapT38UData: make(unixMapT38UData),
+	}
 }
 
 // NewTWT43U 自營商買賣超彙總表
-func NewTWT43U(date time.Time) *TWTXXU {
-	return &TWTXXU{Date: date, fund: "TWT43U"}
+func NewTWT43U(date time.Time) *TWT43U {
+	return &TWT43U{
+		Date:            date,
+		UnixMapT43UData: make(unixMapT43UData),
+	}
 }
 
 // NewTWT44U 投信買賣超彙總表
-func NewTWT44U(date time.Time) *TWTXXU {
-	return &TWTXXU{Date: date, fund: "TWT44U"}
+func NewTWT44U(date time.Time) *TWT44U {
+	return &TWT44U{
+		Date:            date,
+		UnixMapT44UData: make(unixMapT44UData),
+	}
 }
 
 // URL 擷取網址
-func (t TWTXXU) URL() string {
-	return fmt.Sprintf("%s%s", utils.TWSEHOST,
-		fmt.Sprintf(utils.TWTXXU, t.fund, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+func (t TWT38U) URL() string {
 
+	return fmt.Sprintf("%s%s", utils.TWSEHOST,
+		fmt.Sprintf(utils.TWTXXU, "TWT38U", t.Date.Year(), t.Date.Month(), t.Date.Day()))
 }
+func (t TWT43U) URL() string {
+
+	return fmt.Sprintf("%s%s", utils.TWSEHOST,
+		fmt.Sprintf(utils.TWTXXU, "TWT43U", t.Date.Year(), t.Date.Month(), t.Date.Day()))
+}
+func (t TWT44U) URL() string {
+
+	return fmt.Sprintf("%s%s", utils.TWSEHOST,
+		fmt.Sprintf(utils.TWTXXU, "TWT44U", t.Date.Year(), t.Date.Month(), t.Date.Day()))
+}
+
 func checkCsvDataFormat(t string, data []string) bool {
 
 	switch t {
@@ -319,6 +508,174 @@ func checkCsvDataFormat(t string, data []string) bool {
 	default:
 		return true
 	}
+}
+
+func (t *TWT38U) Get() (map[string]BaseT38U, error) {
+	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
+	if v, ok := t.UnixMapT38UData[dateUnix]; ok {
+		return v, nil
+	}
+	var (
+		csvdata   [][]string
+		data      []byte
+		err       error
+		resultMap map[string]BaseT38U
+	)
+	//fmt.Println(t.URL())
+	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
+		return nil, err
+	}
+	var csvArrayContent = strings.Split(string(data), "\n")
+	if len(csvArrayContent) < 9 {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, err
+		}
+		return nil, errorFileNoData
+	}
+	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
+	csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-9]
+
+	for i, v := range csvArrayContent {
+		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+	}
+
+	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+		resultMap = make(map[string]BaseT38U, len(csvdata))
+		for i, v := range csvdata {
+			if i == 0 {
+				if false == checkCsvDataFormat("T38U", v) {
+					return nil, errors.New("Wrong T38U Csv Data Format")
+				}
+				continue
+			}
+			var r BaseT38U
+			no := strings.Replace(v[1], " ", "", -1)
+
+			r.Name = strings.Replace(v[2], " ", "", -1)
+
+			r.Volume.Buy, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
+			r.Volume.Sell, _ = strconv.ParseInt(strings.Replace(v[4], ",", "", -1), 10, 64)
+			r.Volume.Total, _ = strconv.ParseInt(strings.Replace(v[5], ",", "", -1), 10, 64)
+
+			resultMap[no] = r
+
+		}
+		t.UnixMapT38UData[dateUnix] = resultMap
+	}
+	return resultMap, err
+}
+func (t *TWT43U) Get() (map[string]BaseT43U, error) {
+	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
+	if v, ok := t.UnixMapT43UData[dateUnix]; ok {
+		return v, nil
+	}
+	var (
+		csvdata   [][]string
+		data      []byte
+		err       error
+		resultMap map[string]BaseT43U
+	)
+	//fmt.Println(t.URL())
+	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
+		return nil, err
+	}
+	var csvArrayContent = strings.Split(string(data), "\n")
+	if len(csvArrayContent) < 5 {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, err
+		}
+		return nil, errorFileNoData
+	}
+	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
+	csvArrayContent = csvArrayContent[3 : len(csvArrayContent)-5]
+
+	for i, v := range csvArrayContent {
+		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+	}
+
+	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+		resultMap = make(map[string]BaseT43U, len(csvdata))
+		for i, v := range csvdata {
+			if i == 0 {
+				if false == checkCsvDataFormat("T43U", v) {
+					return nil, errors.New("Wrong T43U Csv Data Format")
+				}
+				continue
+			}
+			var r BaseT43U
+			no := strings.Replace(v[0], " ", "", -1)
+
+			r.Name = strings.Replace(v[1], " ", "", -1)
+
+			r.Volume.Buy, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
+			r.Volume.Sell, _ = strconv.ParseInt(strings.Replace(v[4], ",", "", -1), 10, 64)
+			r.Volume.Total, _ = strconv.ParseInt(strings.Replace(v[5], ",", "", -1), 10, 64)
+
+			resultMap[no] = r
+
+		}
+		t.UnixMapT43UData[dateUnix] = resultMap
+	}
+	return resultMap, err
+}
+func (t *TWT44U) Get() (map[string]BaseT44U, error) {
+	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
+	if v, ok := t.UnixMapT44UData[dateUnix]; ok {
+		return v, nil
+	}
+	var (
+		csvdata   [][]string
+		data      []byte
+		err       error
+		resultMap map[string]BaseT44U
+	)
+	//fmt.Println(t.URL())
+	if data, err = hCache.PostForm(t.URL(), nil); err != nil {
+		return nil, err
+	}
+	var csvArrayContent = strings.Split(string(data), "\n")
+	if len(csvArrayContent) < 9 {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, err
+		}
+		return nil, errorFileNoData
+	}
+	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
+	csvArrayContent = csvArrayContent[2 : len(csvArrayContent)-9]
+
+	for i, v := range csvArrayContent {
+		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+	}
+
+	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+		resultMap = make(map[string]BaseT44U, len(csvdata))
+		for i, v := range csvdata {
+			if i == 0 {
+				if false == checkCsvDataFormat("T44U", v) {
+					return nil, errors.New("Wrong T44U Csv Data Format")
+				}
+				continue
+			}
+			var r BaseT44U
+			no := strings.Replace(v[1], " ", "", -1)
+
+			r.Name = strings.Replace(v[2], " ", "", -1)
+
+			r.Volume.Buy, _ = strconv.ParseInt(strings.Replace(v[3], ",", "", -1), 10, 64)
+			r.Volume.Sell, _ = strconv.ParseInt(strings.Replace(v[4], ",", "", -1), 10, 64)
+			r.Volume.Total, _ = strconv.ParseInt(strings.Replace(v[5], ",", "", -1), 10, 64)
+
+			resultMap[no] = r
+
+		}
+		t.UnixMapT44UData[dateUnix] = resultMap
+	}
+	return resultMap, err
+}
+func (t TWTXXU) URL() string {
+	return fmt.Sprintf("%s%s", utils.TWSEHOST,
+		fmt.Sprintf(utils.TWTXXU, t.fund, t.Date.Year(), t.Date.Month(), t.Date.Day()))
+
 }
 
 // Get 擷取資料

@@ -148,7 +148,7 @@ func (hc HTTPCache) PostForm(url string, data url.Values) ([]byte, error) {
 
 	filehash := fmt.Sprintf("%x", hash.Sum(nil))
 
-	//Dbg("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
+	Dbg("file:%s%s/%s\nurl:%s\n", GetOSRamdiskPath(""), TempFolderName, filehash,url)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime(whereUrl(url))
 
@@ -324,7 +324,7 @@ func Untar(dst string, r io.Reader) error {
 
 		// the target location where the dir/file should be created
 		target := filepath.Join(dst, header.Name)
-
+		Dbgln(target)
 		// the following switch could also be done using fi.Mode(), not sure if there
 		// a benefit of using one vs. the other.
 		// fi := header.FileInfo()
@@ -371,7 +371,7 @@ func RecoveryStockBackup(date string) error {
 		if file, err := os.Open(dstFilePath); err == nil {
 			defer file.Close()
 			var fileReader io.ReadCloser = file
-			Untar("/", fileReader)
+			Untar(GetOSRamdiskPath("")+"../../", fileReader)
 		} else {
 			return err
 		}
