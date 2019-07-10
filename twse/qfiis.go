@@ -249,6 +249,29 @@ func (t *TWT44U) SetDate(date time.Time) *TWT44U {
 	return t
 }
 
+//IsOverBought 獲取該日某股的融資融券是否為增
+func (t *TWMTSS) IsOverBought(date time.Time, stockNo string) (bool, []int64, error) {
+	var (
+		data []int64
+		err  error
+		ans  bool
+	)
+
+	defer t.SetDate(t.Date)
+	t.SetDate(date)
+
+	if v, err = t.GetData(); err != nil {
+		errors.Wrapf(err, "Fail to GetData in %s", date.Format("2006-01-02"))
+	} else {
+		if v[stockNo].MT.Total > 0 && v[stockNo].SS.Total {
+			data := make([]int64, 2)
+			data[0] = v[stockNo].MT.Total
+			data[1] = v[stockNo].SS.Total
+			ans = true
+		}
+	}
+	return ans, data, err
+}
 func (t *TWMTSS) Get() (map[string]BaseMTSS, error) {
 	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
 	if v, ok := t.UnixMapMTSSData[dateUnix]; ok {
@@ -350,20 +373,20 @@ func (t *TWT44U) GetData() (map[string]BaseT44U, error) {
 		return t.GetData()
 	}
 }
-func (t *TWT38U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
+func (t *TWT38U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	var (
 		overbought int
-		getDay     int
+		getDays    int
 	)
 
-	data := make([]int64, day)
+	data := make([]int64, days)
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	RecentlyOpendtoday := t.Date
 	bkDate := t.Date
-	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
-	for ; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(t.Date) && getDay < day; t.Round() {
+	//從最近的天數開始抓取 days 天的 資料 到 前(10+days)天 如果沒有抓到 days 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
 		if v, err := t.GetData(); err == nil {
-			getDay++
+			getDays++
 			if v[stockNo].Volume.Total > 0 {
 				data[overbought] = v[stockNo].Volume.Total
 				overbought++
@@ -371,26 +394,26 @@ func (t *TWT38U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
 		}
 	}
 	t.SetDate(bkDate)
-	if getDay == day {
-		return overbought == day, data
+	if getDays == days {
+		return overbought == days, data
 	} else {
 		return false, nil
 	}
 }
-func (t *TWT43U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
+func (t *TWT43U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	var (
 		overbought int
-		getDay     int
+		getDays    int
 	)
 
-	data := make([]int64, day)
+	data := make([]int64, days)
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	RecentlyOpendtoday := t.Date
 	bkDate := t.Date
-	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
-	for ; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(t.Date) && getDay < day; t.Round() {
+	//從最近的天數開始抓取 days 天的 資料 到 前(10+days)天 如果沒有抓到 days 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
 		if v, err := t.GetData(); err == nil {
-			getDay++
+			getDays++
 			if v[stockNo].Volume.Total > 0 {
 				data[overbought] = v[stockNo].Volume.Total
 				overbought++
@@ -398,26 +421,26 @@ func (t *TWT43U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
 		}
 	}
 	t.SetDate(bkDate)
-	if getDay == day {
-		return overbought == day, data
+	if getDays == days {
+		return overbought == days, data
 	} else {
 		return false, nil
 	}
 }
-func (t *TWT44U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
+func (t *TWT44U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	var (
 		overbought int
-		getDay     int
+		getDays    int
 	)
 
-	data := make([]int64, day)
+	data := make([]int64, days)
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	RecentlyOpendtoday := t.Date
 	bkDate := t.Date
-	//從最近的天數開始抓取 day 天的 資料 到 前(10+day)天 如果沒有抓到 day 天資料則錯誤
-	for ; RecentlyOpendtoday.AddDate(0, 0, -10-day).Before(t.Date) && getDay < day; t.Round() {
+	//從最近的天數開始抓取 days 天的 資料 到 前(10+days)天 如果沒有抓到 days 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
 		if v, err := t.GetData(); err == nil {
-			getDay++
+			getDays++
 			if v[stockNo].Volume.Total > 0 {
 				data[overbought] = v[stockNo].Volume.Total
 				overbought++
@@ -425,8 +448,8 @@ func (t *TWT44U) IsOverBoughtDates(stockNo string, day int) (bool, []int64) {
 		}
 	}
 	t.SetDate(bkDate)
-	if getDay == day {
-		return overbought == day, data
+	if getDays == days {
+		return overbought == days, data
 	} else {
 		return false, nil
 	}
