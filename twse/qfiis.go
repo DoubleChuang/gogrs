@@ -260,10 +260,10 @@ func (t *TWMTSS) IsOverBought(date time.Time, stockNo string) (bool, []int64, er
 	defer t.SetDate(t.Date)
 	t.SetDate(date)
 
-	if v, err = t.GetData(); err != nil {
+	if v, err := t.GetData(); err != nil {
 		errors.Wrapf(err, "Fail to GetData in %s", date.Format("2006-01-02"))
 	} else {
-		if v[stockNo].MT.Total > 0 && v[stockNo].SS.Total {
+		if v[stockNo].MT.Total > 0 && v[stockNo].SS.Total > 0 {
 			data := make([]int64, 2)
 			data[0] = v[stockNo].MT.Total
 			data[1] = v[stockNo].SS.Total

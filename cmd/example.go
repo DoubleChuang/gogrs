@@ -383,16 +383,16 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 					if err != nil {
 						return err
 					}
-					/*fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t T44OverBought:%t MTSSOverBought:%t\n",
-					v.No,
-					res.todayRange,
-					res.todayPrice,
-					res.todayGain,
-					res.NDayAvg,
-					res.overMA,
-					isT38OverBought,
-					isT44OverBought,
-					isMTSSOverBought)*/
+					fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t T44OverBought:%t MTSSOverBought:%t\n",
+						v.No,
+						res.todayRange,
+						res.todayPrice,
+						res.todayGain,
+						res.NDayAvg,
+						res.overMA,
+						isT38OverBought,
+						isT44OverBought,
+						isMTSSOverBought)
 				}
 
 			}
