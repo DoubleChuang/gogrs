@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	
-	"github.com/pkg/errors"
+
+	"github.com/DoubleChuang/gogrs/tradingdays"
 	"github.com/DoubleChuang/gogrs/utils"
+	"github.com/pkg/errors"
 )
 
 type unixMapData map[int64][][]string
@@ -24,6 +25,7 @@ type Data struct {
 	No             string
 	Name           string
 	Date           time.Time
+	BackupDate     time.Time
 	RawData        [][]string
 	UnixMapData    unixMapData
 	exchange       string
@@ -42,6 +44,7 @@ func NewTWSE(No string, Date time.Time) *Data {
 	return &Data{
 		No:          No,
 		Date:        Date,
+		BackupDate:  Date,
 		exchange:    "tse",
 		UnixMapData: make(unixMapData),
 	}
@@ -81,7 +84,7 @@ func (d *Data) Round() {
 // PlusData will do Round() and Get().
 func (d *Data) PlusData() {
 	d.Round()
-	if _,err:=d.Get(); err!=nil{
+	if _, err := d.Get(); err != nil {
 		fmt.Println(err)
 	}
 }
@@ -100,7 +103,10 @@ func (d *Data) clearCache() {
 // Get return csv data in array.
 func (d *Data) Get() ([][]string, error) {
 	monthDateUnix := time.Date(d.Date.Year(), d.Date.Month(), 1, 0, 0, 0, 0, d.Date.Location()).Unix()
-	if len(d.UnixMapData[monthDateUnix]) == 0 {
+	utils.Dbgln("")
+	if _, exist := d.UnixMapData[monthDateUnix]; !exist ||
+		d.Date.Month() == tradingdays.FindRecentlyOpened(time.Now()).Month() {
+		utils.Dbgln(d.Date)
 		var data []byte
 		var err error
 		//fmt.Println(d.URL())
@@ -118,14 +124,15 @@ func (d *Data) Get() ([][]string, error) {
 			csvArrayContent[i] = strings.TrimSpace(csvArrayContent[i])
 		}
 		var csvReader *csv.Reader
+
 		if (d.exchange == "tse" && len(csvArrayContent) > 2) || (d.exchange == "otc" && len(csvArrayContent) > 5) {
 			if d.exchange == "tse" {
 				var regdate = regexp.MustCompile(`^\"[0-9/]{7,}`)
 				if d.Name == "" {
 					groups := strings.Split(csvArrayContent[0], " ")
-					if(len(groups)>=2){
+					if len(groups) >= 2 {
 						d.No, d.Name = groups[1], groups[2]
-					}else{
+					} else {
 						//fmt.Println("errorNotEnoughData")
 						return nil, errors.WithMessage(errorNotEnoughData, utils.GetMD5FilePath(d))
 					}
@@ -136,6 +143,7 @@ func (d *Data) Get() ([][]string, error) {
 						datalist = append(datalist, v)
 					}
 				}
+
 				csvReader = csv.NewReader(strings.NewReader(strings.Join(datalist, "\n")))
 			} else if d.exchange == "otc" {
 				if d.Name == "" {
@@ -144,13 +152,27 @@ func (d *Data) Get() ([][]string, error) {
 				csvReader = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent[5:len(csvArrayContent)-1], "\n")))
 			}
 			allData, err := csvReader.ReadAll()
-			d.RawData = append(allData, d.RawData...)
-			d.UnixMapData[monthDateUnix] = allData
+			pickData := make([][]string, 0)
+
+			for _, v := range allData {
+
+				if d.BackupDate.After(utils.ParseDate(string(v[0]))) ||
+					d.BackupDate.Equal(utils.ParseDate(string(v[0]))) {
+
+					utils.Dbgln(d.BackupDate, utils.ParseDate(string(v[0])))
+					pickData = append(pickData, v)
+
+				}
+			}
+
+			d.RawData = append(pickData, d.RawData...)
+			//d.RawData = append(allData, d.RawData...)
+			d.UnixMapData[monthDateUnix] = pickData
 			d.clearCache()
-			return allData, err
+			return pickData, err
 		}
 		return nil, errors.WithMessage(errorNotEnoughData,
-		     utils.GetMD5FilePath(d))
+			utils.GetMD5FilePath(d))
 	}
 	return d.UnixMapData[monthDateUnix], nil
 }
@@ -173,6 +195,7 @@ func (d Data) GetByTimeMap() map[time.Time]interface{} {
 	}
 	return data
 }
+
 //收集某colsNo行的資料回傳
 func (d Data) getColsList(colsNo int) []string {
 	var result []string
@@ -182,6 +205,7 @@ func (d Data) getColsList(colsNo int) []string {
 	}
 	return result
 }
+
 //將getColsList收集來的資料檢查是否有逗號並轉成Float64
 func (d Data) getColsListFloat64(colsNo int) []float64 {
 	var result []float64

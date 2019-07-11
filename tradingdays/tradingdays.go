@@ -59,6 +59,37 @@ func FindRecentlyOpened(date time.Time) time.Time {
 
 }
 
+// FindRecentlyOpenedTaipeiZone 回傳最近一個開市時間（TaipeiZone 0）
+func FindRecentlyOpenedTaipeiZone(date time.Time) time.Time {
+	var (
+		d     = date.In(utils.TaipeiTimeZone)
+		days  = d.Day()
+		index int
+		tp    *TimePeriod
+	)
+
+	for {
+		if IsOpen(d.Year(), d.Month(), days) {
+			if index == 0 {
+				tp = NewTimePeriod(time.Date(d.Year(), d.Month(), days, d.Hour(), d.Minute(), d.Second(), d.Nanosecond(), utils.TaipeiTimeZone))
+				if tp.AtBefore() || tp.AtOpen() {
+					days--
+					for {
+						if IsOpen(d.Year(), d.Month(), days) {
+							break
+						}
+						days--
+					}
+				}
+			}
+			return time.Date(d.Year(), d.Month(), days, 0, 0, 0, 0, utils.TaipeiTimeZone)
+		}
+		days--
+		index++
+	}
+
+}
+
 var (
 	csvEtag    string
 	exceptDays map[int64]bool
