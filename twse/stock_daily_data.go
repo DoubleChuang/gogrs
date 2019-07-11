@@ -103,10 +103,8 @@ func (d *Data) clearCache() {
 // Get return csv data in array.
 func (d *Data) Get() ([][]string, error) {
 	monthDateUnix := time.Date(d.Date.Year(), d.Date.Month(), 1, 0, 0, 0, 0, d.Date.Location()).Unix()
-	utils.Dbgln("")
 	if _, exist := d.UnixMapData[monthDateUnix]; !exist ||
 		d.Date.Month() == tradingdays.FindRecentlyOpened(time.Now()).Month() {
-		utils.Dbgln(d.Date)
 		var data []byte
 		var err error
 		//fmt.Println(d.URL())
@@ -159,7 +157,7 @@ func (d *Data) Get() ([][]string, error) {
 				if d.BackupDate.After(utils.ParseDate(string(v[0]))) ||
 					d.BackupDate.Equal(utils.ParseDate(string(v[0]))) {
 
-					utils.Dbgln(d.BackupDate, utils.ParseDate(string(v[0])))
+					//utils.Dbgln(d.BackupDate, utils.ParseDate(string(v[0])))
 					pickData = append(pickData, v)
 
 				}

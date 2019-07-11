@@ -148,7 +148,7 @@ func (hc HTTPCache) PostForm(url string, data url.Values) ([]byte, error) {
 
 	filehash := fmt.Sprintf("%x", hash.Sum(nil))
 
-	Dbg("file:%s%s/%s\nurl:%s\n", GetOSRamdiskPath(""), TempFolderName, filehash, url)
+	//Dbg("file:%s%s/%s\nurl:%s\n", GetOSRamdiskPath(""), TempFolderName, filehash, url)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime(whereUrl(url))
 
