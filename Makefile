@@ -1,5 +1,8 @@
 #TIME = $(shell date +"%Y%m%d%H%M%S")
-TIME = $(shell date +"%Y%m%d")
+TIME = $(DATE)
+ifeq ($(TIME), )
+	TIME = $(shell date +"%Y%m%d")
+endif
 
 TARGET_DIR=/run/shm/.gogrscache
 BACKUP_DIR=$(PWD)/STOCK_DATA_BACKUP
