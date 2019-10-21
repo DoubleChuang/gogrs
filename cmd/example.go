@@ -38,6 +38,8 @@ import (
 
 const shortForm = "20060102"
 
+var fiNetBuyDay int
+var itNetBuyDay int
 var minDataNum *int
 var useMtss *bool
 var useT38 *bool
@@ -367,8 +369,8 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 		//checkFirstDayOfMonth(stock)
 		if err := prepareStock(stock, minDataNum); err == nil {
 			output := true
-			isT38OverBought, _ := t38.IsOverBoughtDates(v.No, 3)
-			isT44OverBought, _ := t44.IsOverBoughtDates(v.No, 3)
+			isT38OverBought, _ := t38.IsOverBoughtDates(v.No, fiNetBuyDay)
+			isT44OverBought, _ := t44.IsOverBoughtDates(v.No, itNetBuyDay)
 			isMTSSOverBought := mtssMapData[v.No].MT.Total > 0 && mtssMapData[v.No].SS.Total > 0
 			if res, err := showStock(stock, minDataNum); err == nil {
 				if *useCp {
@@ -431,7 +433,7 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 
 			}
 		} else {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}
 	return nil
@@ -628,6 +630,8 @@ func init() {
 	RootCmd.AddCommand(getT44Cmd)
 
 	minDataNum = getAllStockCmd.PersistentFlags().IntP("num", "N", 3, "min date num")
+	getAllStockCmd.PersistentFlags().IntVarP(&fiNetBuyDay, "fiBuyDay", "k", 3, "外資買超天數")
+	getAllStockCmd.PersistentFlags().IntVarP(&itNetBuyDay, "itBuyDay", "j", 3, "投信買超天數")
 	useMtss = getAllStockCmd.PersistentFlags().BoolP("mtss", "m", false, "使用融資融券篩選")
 	useT38 = getAllStockCmd.PersistentFlags().BoolP("fi", "f", false, "使用外資篩選")
 	useT44 = getAllStockCmd.PersistentFlags().BoolP("it", "i", false, "使用投信篩選")
