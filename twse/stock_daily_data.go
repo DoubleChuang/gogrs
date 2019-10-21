@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os"
 
 	"github.com/DoubleChuang/gogrs/tradingdays"
 	"github.com/DoubleChuang/gogrs/utils"
@@ -85,7 +86,7 @@ func (d *Data) Round() {
 func (d *Data) PlusData() {
 	d.Round()
 	if _, err := d.Get(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 	}
 }
 
@@ -131,8 +132,7 @@ func (d *Data) Get() ([][]string, error) {
 					if len(groups) >= 2 {
 						d.No, d.Name = groups[1], groups[2]
 					} else {
-						//fmt.Println("errorNotEnoughData")
-						return nil, errors.WithMessage(errorNotEnoughData, utils.GetMD5FilePath(d))
+						return nil, errors.WithMessagef(errorNotEnoughData, "GroupFail:[%s]%s %s\n", d.No, utils.GetMD5FilePath(d), d.URL())
 					}
 				}
 				var datalist []string
@@ -169,8 +169,8 @@ func (d *Data) Get() ([][]string, error) {
 			d.clearCache()
 			return pickData, err
 		}
-		return nil, errors.WithMessage(errorNotEnoughData,
-			utils.GetMD5FilePath(d))
+
+		return nil, errors.WithMessagef(errorNotEnoughData, "[%s]%s %s\n", d.No, utils.GetMD5FilePath(d), d.URL())
 	}
 	return d.UnixMapData[monthDateUnix], nil
 }
