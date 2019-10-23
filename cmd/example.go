@@ -369,8 +369,8 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 		//checkFirstDayOfMonth(stock)
 		if err := prepareStock(stock, minDataNum); err == nil {
 			output := true
-			isT38OverBought, _ := t38.IsOverBoughtDates(v.No, fiNetBuyDay)
-			isT44OverBought, _ := t44.IsOverBoughtDates(v.No, itNetBuyDay)
+			isT38OverBought, t38ValList := t38.IsOverBoughtDates(v.No, fiNetBuyDay)
+			isT44OverBought, t44ValList := t44.IsOverBoughtDates(v.No, itNetBuyDay)
 			isMTSSOverBought := mtssMapData[v.No].MT.Total > 0 && mtssMapData[v.No].SS.Total > 0
 			if res, err := showStock(stock, minDataNum); err == nil {
 				if *useCp {
@@ -419,7 +419,7 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 					if err != nil {
 						return err
 					}
-					fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t T44OverBought:%t MTSSOverBought:%t\n",
+					fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t(%v) T44OverBought:%t(%v) MTSSOverBought:%t\n",
 						v.No,
 						res.todayRange,
 						res.todayPrice,
@@ -427,7 +427,9 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 						res.NDayAvg,
 						res.overMA,
 						isT38OverBought,
+						t38ValList,
 						isT44OverBought,
+						t44ValList,
 						isMTSSOverBought)
 				}
 
