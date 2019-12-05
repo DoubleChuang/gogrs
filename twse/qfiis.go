@@ -373,12 +373,16 @@ func (t *TWT44U) GetData() (map[string]BaseT44U, error) {
 		return t.GetData()
 	}
 }
-func (t *TWT38U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
+func (t *TWT38U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int64) {
 	var (
-		overbought int
-		getDays    int
+		overbought  int
+		getDays     int
+		increment   bool
+		onlyOneZero bool = true
 	)
-
+	if days < 0 {
+		return false, false, nil
+	}
 	data := make([]int64, days)
 	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
 	RecentlyOpendtoday := t.Date
@@ -387,7 +391,10 @@ func (t *TWT38U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
 		if v, err := t.GetData(); err == nil {
 			getDays++
-			if v[stockNo].Volume.Total > 0 {
+			if onlyOneZero || v[stockNo].Volume.Total > 0 {
+				if v[stockNo].Volume.Total <= 0 {
+					onlyOneZero = false
+				}
 				data[overbought] = v[stockNo].Volume.Total
 				overbought++
 			}
@@ -395,9 +402,17 @@ func (t *TWT38U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	}
 	t.SetDate(bkDate)
 	if getDays == days {
-		return overbought == days, data
+		for i := 1; i < len(data); i++ {
+			if data[i-1] >= data[i] {
+				increment = true
+			} else {
+				increment = false
+				break
+			}
+		}
+		return overbought == days, increment, data
 	} else {
-		return false, nil
+		return false, false, nil
 	}
 }
 func (t *TWT43U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
@@ -427,10 +442,12 @@ func (t *TWT43U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 		return false, nil
 	}
 }
-func (t *TWT44U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
+func (t *TWT44U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int64) {
 	var (
-		overbought int
-		getDays    int
+		overbought  int
+		getDays     int
+		increment   bool
+		onlyOneZero = true
 	)
 
 	data := make([]int64, days)
@@ -441,17 +458,29 @@ func (t *TWT44U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
 		if v, err := t.GetData(); err == nil {
 			getDays++
-			if v[stockNo].Volume.Total > 0 {
+			if onlyOneZero || v[stockNo].Volume.Total > 0 {
+				if v[stockNo].Volume.Total <= 0 {
+					onlyOneZero = false
+				}
 				data[overbought] = v[stockNo].Volume.Total
 				overbought++
+
 			}
 		}
 	}
 	t.SetDate(bkDate)
 	if getDays == days {
-		return overbought == days, data
+		for i := 1; i < len(data); i++ {
+			if data[i-1] >= data[i] {
+				increment = true
+			} else {
+				increment = false
+				break
+			}
+		}
+		return overbought == days, increment, data
 	} else {
-		return false, nil
+		return false, false, nil
 	}
 }
 

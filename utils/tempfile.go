@@ -127,10 +127,20 @@ func (hc HTTPCache) Get(url string, rand bool) ([]byte, error) {
 		err     error
 	)
 
-	//fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
+	fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime(whereUrl(url))
 		return hc.saveFile(url, filehash, rand, nil)
+	} else {
+		csvArrayContent := strings.Split(string(content), "\n")
+		if len(csvArrayContent) < 1 {
+			err = os.Remove(filepath.Join(hc.fullpath, filehash))
+			if err != nil {
+				return nil, err
+			} else {
+				return hc.saveFile(url, filehash, rand, nil)
+			}
+		}
 	}
 	return content, nil
 }

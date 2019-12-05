@@ -194,9 +194,10 @@ func NewLists(t time.Time) *Lists {
 		categoryNoList:  make(map[string][]StockInfo),
 	}
 }
-func (l Lists) Url()string{
+func (l Lists) Url() string {
 	return fmt.Sprintf("%s%s", utils.TWSEHOST, fmt.Sprintf(utils.TWSELISTCSV, l.Date.Year(), l.Date.Month(), l.Date.Day(), "ALL"))
 }
+
 // Get is to get TWSE csv data.
 func (l *Lists) Get(category string) ([][]string, error) {
 	if TWSECLASS[category] == "" {
@@ -251,8 +252,8 @@ func (l *Lists) Get(category string) ([][]string, error) {
 // GetCategoryList 取得分類的股票代碼與名稱列表
 func (l Lists) GetCategoryList(category string) []StockInfo {
 	if _, ok := l.categoryNoList[category]; !ok {
-		if _, err := l.Get(category); err!=nil {
-			//fmt.Println("GetCategoryList:",err)
+		if _, err := l.Get(category); err != nil {
+			println("GetCategoryList:", err)
 			panic(err)
 		}
 	}
@@ -355,10 +356,10 @@ func (o *OTCLists) Get(category string) ([][]string, error) {
 // GetCategoryList 取得分類的股票代碼與名稱列表
 func (o OTCLists) GetCategoryList(category string) []StockInfo {
 	if _, ok := o.categoryNoList[category]; !ok {
-		if _, err := o.Get(category); err!=nil {
-            //fmt.Println("GetCategoryList:",err)
+		if _, err := o.Get(category); err != nil {
+			//fmt.Println("GetCategoryList:",err)
 			panic(err)
-        }
+		}
 	}
 	return o.categoryNoList[category]
 }

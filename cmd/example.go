@@ -40,6 +40,8 @@ const shortForm = "20060102"
 
 var fiNetBuyDay int
 var itNetBuyDay int
+var fiIncrementalBuy bool
+var itIncrementalBuy bool
 var minDataNum *int
 var useMtss *bool
 var useT38 *bool
@@ -247,8 +249,8 @@ func getOneTWSE(date time.Time, stockNo string, t38 **twse.TWT38U, t44 **twse.TW
 			}
 		}
 		utils.Dbgln(i)
-		isT38OverBought, x := (*t38).IsOverBoughtDates(stockNo, 3)
-		isT44OverBought, y := (*t44).IsOverBoughtDates(stockNo, 3)
+		isT38OverBought, _, x := (*t38).IsOverBoughtDates(stockNo, 3)
+		isT44OverBought, _, y := (*t44).IsOverBoughtDates(stockNo, 3)
 		if s, err := showStock(pStock, 20); err == nil {
 			ret = fmt.Sprintf("漲跌: %.2f\n成交價: %.2f\n漲跌幅: %.2f%%\n20MA:%.2f\n突破MA:%t\n外資增：%t %d\n投信增:%t %d\n融資增：%t %d\n融券增：%t %d\n=========\n",
 				s.todayRange,
@@ -369,8 +371,8 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 		//checkFirstDayOfMonth(stock)
 		if err := prepareStock(stock, minDataNum); err == nil {
 			output := true
-			isT38OverBought, t38ValList := t38.IsOverBoughtDates(v.No, fiNetBuyDay)
-			isT44OverBought, t44ValList := t44.IsOverBoughtDates(v.No, itNetBuyDay)
+			isT38OverBought, t38Increase, t38ValList := t38.IsOverBoughtDates(v.No, fiNetBuyDay)
+			isT44OverBought, t44Increase, t44ValList := t44.IsOverBoughtDates(v.No, itNetBuyDay)
 			isMTSSOverBought := mtssMapData[v.No].MT.Total > 0 && mtssMapData[v.No].SS.Total > 0
 			if res, err := showStock(stock, minDataNum); err == nil {
 				if *useCp {
@@ -397,6 +399,16 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 				}
 				if *useMtss {
 					if !isMTSSOverBought {
+						output = false
+					}
+				}
+				if fiIncrementalBuy {
+					if !t38Increase {
+						output = false
+					}
+				}
+				if itIncrementalBuy {
+					if !t44Increase {
 						output = false
 					}
 				}
@@ -525,7 +537,7 @@ func prepareStock(stock *twse.Data, mindata int) error {
 			start = stock.Len()
 		}
 		if stock.Len() < mindata {
-			return errors.New("Can't prepare enough data, please check file has data or remove cache file")
+			return errors.New("Can't prepare enough data please check file has data or remove cache file")
 		}
 	}
 	return nil
@@ -634,6 +646,9 @@ func init() {
 	minDataNum = getAllStockCmd.PersistentFlags().IntP("num", "N", 3, "min date num")
 	getAllStockCmd.PersistentFlags().IntVarP(&fiNetBuyDay, "fiBuyDay", "k", 3, "外資買超天數")
 	getAllStockCmd.PersistentFlags().IntVarP(&itNetBuyDay, "itBuyDay", "j", 3, "投信買超天數")
+	getAllStockCmd.PersistentFlags().BoolVarP(&fiIncrementalBuy, "fiIncrementalBuy", "g", false, "外資買超增加")
+	getAllStockCmd.PersistentFlags().BoolVarP(&itIncrementalBuy, "itIncrementalBuy", "l", false, "投信買超增加")
+
 	useMtss = getAllStockCmd.PersistentFlags().BoolP("mtss", "m", false, "使用融資融券篩選")
 	useT38 = getAllStockCmd.PersistentFlags().BoolP("fi", "f", false, "使用外資篩選")
 	useT44 = getAllStockCmd.PersistentFlags().BoolP("it", "i", false, "使用投信篩選")
