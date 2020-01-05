@@ -460,7 +460,7 @@ func getOTC(category string, minDataNum int) error {
 
 	oList := otc.GetCategoryList(category)
 
-	year, month, day := RecentlyOpendtoday.Date()
+	/*year, month, day := RecentlyOpendtoday.Date()
 
 	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	defer csvFile.Close()
@@ -468,13 +468,13 @@ func getOTC(category string, minDataNum int) error {
 		utils.Dbg("error: %s\n", err)
 		return err
 	}
-	csvWriter := csv.NewWriter(csvFile)
+	csvWriter := csv.NewWriter(csvFile)*/
 
 	for _, v := range oList {
 		stock := twse.NewOTC(v.No, RecentlyOpendtoday)
 		if err := prepareStock(stock, minDataNum); err == nil {
 			if res, err := showStock(stock, minDataNum); err == nil {
-				err = csvWriter.Write([]string{v.No,
+				/*err = csvWriter.Write([]string{v.No,
 					fmt.Sprintf("%.2f", res.todayRange),
 					fmt.Sprintf("%.2f", res.todayPrice),
 					fmt.Sprintf("%.2f", res.todayGain),
@@ -487,7 +487,7 @@ func getOTC(category string, minDataNum int) error {
 				err = csvWriter.Error()
 				if err != nil {
 					return err
-				}
+				}*/
 				fmt.Printf("No: %6s Range: %.2f Price: %.2f Gain: %.2f%% NDayAvg:%.2f overMA:%t\n",
 					v.No,
 					res.todayRange,
@@ -523,7 +523,7 @@ func prepareStock(stock *twse.Data, mindata int) error {
 	if _, err := stock.Get(); err != nil {
 		return err
 	}
-
+	utils.Dbgln("stock len:", stock.Len())
 	if stock.Len() < mindata {
 		start := stock.Len()
 		for {
