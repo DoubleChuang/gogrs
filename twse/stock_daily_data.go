@@ -3,11 +3,11 @@ package twse
 import (
 	"encoding/csv"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"os"
 
 	"github.com/DoubleChuang/gogrs/tradingdays"
 	"github.com/DoubleChuang/gogrs/utils"
@@ -56,6 +56,7 @@ func NewOTC(No string, Date time.Time) *Data {
 	return &Data{
 		No:          No,
 		Date:        Date,
+		BackupDate:  Date,
 		exchange:    "otc",
 		UnixMapData: make(unixMapData),
 	}
@@ -108,7 +109,7 @@ func (d *Data) Get() ([][]string, error) {
 		d.Date.Month() == tradingdays.FindRecentlyOpened(time.Now()).Month() {
 		var data []byte
 		var err error
-		//fmt.Println(d.URL())
+		//fmt.Println("stock url:", d.URL())
 		switch d.exchange {
 		case "tse":
 			data, err = hCache.PostForm(d.URL(), nil)
