@@ -190,6 +190,30 @@ var getAllStockCmd = &cobra.Command{
 	},
 }
 
+var testTpexT38Cmd = &cobra.Command{
+	Use:   "test",
+	Short: "test",
+	Long:  `test tpex t38`,
+	Run: func(cmd *cobra.Command, args []string) {
+		date, _ := time.Parse(shortForm, *useDate)
+		date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, utils.TaipeiTimeZone)
+
+		TpexT38U := twse.NewTPEXT38U(date)
+		if v, err := TpexT38U.Get(); err == nil {
+			utils.Dbgln(v["3105"])
+		} else {
+			utils.Dbgln(err.Error())
+		}
+
+		TpexT44U := twse.NewTPEXT44U(date)
+		if v, err := TpexT44U.Get(); err == nil {
+			utils.Dbgln(v["3105"])
+		} else {
+			utils.Dbgln(err.Error())
+		}
+	},
+}
+
 var getStockCmd = &cobra.Command{
 	Use:   "gs",
 	Short: "Get one stock",
@@ -523,7 +547,7 @@ func prepareStock(stock *twse.Data, mindata int) error {
 	if _, err := stock.Get(); err != nil {
 		return err
 	}
-	utils.Dbgln("stock len:", stock.Len())
+	//utils.Dbgln("stock len:", stock.Len())
 	if stock.Len() < mindata {
 		start := stock.Len()
 		for {
@@ -661,6 +685,7 @@ func init() {
 	getAllStockCmd.AddCommand(getTPEXCmd)
 	getAllStockCmd.AddCommand(getTWSECmd)
 	getAllStockCmd.AddCommand(getStockCmd)
+	getAllStockCmd.AddCommand(testTpexT38Cmd)
 
 	// Here you will define your flags and configuration settings.
 

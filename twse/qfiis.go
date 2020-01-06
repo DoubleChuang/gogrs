@@ -165,6 +165,8 @@ type unixMapT38UData map[int64]map[string]BaseT38U
 type unixMapT43UData map[int64]map[string]BaseT43U
 type unixMapT44UData map[int64]map[string]BaseT44U
 
+type buySellTotalData map[int64]map[string]BaseBuySellTotalData
+
 type TradingVolume struct {
 	Buy   int64 // 買進
 	Sell  int64 // 賣出
@@ -192,6 +194,25 @@ type BaseT44U struct {
 	No     string
 	Name   string
 	Volume TradingVolume
+}
+
+type BaseBuySellTotalData struct {
+	No     string
+	Name   string
+	Volume TradingVolume
+}
+
+type TPEXT38U struct {
+	Date     time.Time
+	UnixData buySellTotalData
+}
+type TPEXT43U struct {
+	Date     time.Time
+	UnixData buySellTotalData
+}
+type TPEXT44U struct {
+	Date     time.Time
+	UnixData buySellTotalData
 }
 
 type TWT38U struct {
@@ -342,6 +363,7 @@ func (t *TWMTSS) GetData() (map[string]BaseMTSS, error) {
 		return t.GetData()
 	}
 }
+
 func (t *TWT38U) GetData() (map[string]BaseT38U, error) {
 	if v, err := t.Get(); err == nil {
 		return v, err
@@ -494,16 +516,59 @@ func (t *TWTXXU) Round() {
 	t.Date = tradingdays.FindRecentlyOpened(t.Date)
 }
 
+//台灣證券櫃買中心
+
+//Round 外資
+func (t *TPEXT38U) Round() {
+	t.Date = tradingdays.FindRecentlyOpened(t.Date)
+}
+
+//Round 投信
+func (t *TPEXT43U) Round() {
+	t.Date = tradingdays.FindRecentlyOpened(t.Date)
+}
+
+//Round 自營商
+func (t *TPEXT44U) Round() {
+	t.Date = tradingdays.FindRecentlyOpened(t.Date)
+}
+
+//台灣證交所
+
+//Round 外資
 func (t *TWT38U) Round() {
 	t.Date = tradingdays.FindRecentlyOpened(t.Date)
 }
 
+//Round 投信
 func (t *TWT43U) Round() {
 	t.Date = tradingdays.FindRecentlyOpened(t.Date)
 }
 
+//Round 自營商
 func (t *TWT44U) Round() {
 	t.Date = tradingdays.FindRecentlyOpened(t.Date)
+}
+
+func NewTPEXT38U(date time.Time) *TPEXT38U {
+	return &TPEXT38U{
+		Date:     date,
+		UnixData: make(buySellTotalData),
+	}
+}
+
+func NewTPEXT44U(date time.Time) *TPEXT44U {
+	return &TPEXT44U{
+		Date:     date,
+		UnixData: make(buySellTotalData),
+	}
+}
+
+func NewTPEXT43U(date time.Time) *TPEXT43U {
+	return &TPEXT43U{
+		Date:     date,
+		UnixData: make(buySellTotalData),
+	}
 }
 
 // NewTWT38U 外資及陸資買賣超彙總表
@@ -530,17 +595,42 @@ func NewTWT44U(date time.Time) *TWT44U {
 	}
 }
 
-// URL 擷取網址
+// URL 擷取 外資 網址
+func (t TPEXT38U) URL() string {
+
+	return fmt.Sprintf("%s%s", utils.OTCHOST,
+		fmt.Sprintf(utils.OTC3instiCSV, fmt.Sprintf("%d/%02d/%02d", t.Date.Year()-1911, t.Date.Month(), t.Date.Day())))
+}
+
+// URL 擷取 自營商 網址
+func (t TPEXT43U) URL() string {
+
+	return fmt.Sprintf("%s%s", utils.OTCHOST,
+		fmt.Sprintf(utils.OTC3instiCSV, fmt.Sprintf("%d/%02d/%02d", t.Date.Year()-1911, t.Date.Month(), t.Date.Day())))
+}
+
+// URL 擷取 投信 網址
+func (t TPEXT44U) URL() string {
+
+	return fmt.Sprintf("%s%s", utils.OTCHOST,
+		fmt.Sprintf(utils.OTC3instiCSV, fmt.Sprintf("%d/%02d/%02d", t.Date.Year()-1911, t.Date.Month(), t.Date.Day())))
+}
+
+// URL 擷取 外資 網址
 func (t TWT38U) URL() string {
 
 	return fmt.Sprintf("%s%s", utils.TWSEHOST,
 		fmt.Sprintf(utils.TWTXXU, "TWT38U", t.Date.Year(), t.Date.Month(), t.Date.Day()))
 }
+
+// URL 擷取 自營商 網址
 func (t TWT43U) URL() string {
 
 	return fmt.Sprintf("%s%s", utils.TWSEHOST,
 		fmt.Sprintf(utils.TWTXXU, "TWT43U", t.Date.Year(), t.Date.Month(), t.Date.Day()))
 }
+
+// URL 擷取 投信 網址
 func (t TWT44U) URL() string {
 
 	return fmt.Sprintf("%s%s", utils.TWSEHOST,
@@ -557,11 +647,151 @@ func checkCsvDataFormat(t string, data []string) bool {
 			"買進" == strings.Replace(data[2], " ", "", -1) &&
 			"股票名稱" == strings.Replace(data[1], " ", "", -1) &&
 			"股票代號" == strings.Replace(data[0], " ", "", -1)
+	case "TpexT38":
+		return "三大法人買賣超股數合計" == strings.Replace(data[23], " ", "", -1) &&
+			"外資及陸資-買賣超股數" == strings.Replace(data[10], " ", "", -1) &&
+			"外資及陸資-賣出股數" == strings.Replace(data[9], " ", "", -1) &&
+			"外資及陸資-買進股數" == strings.Replace(data[8], " ", "", -1) &&
+			"名稱" == strings.Replace(data[1], " ", "", -1) &&
+			"代號" == strings.Replace(data[0], " ", "", -1)
+	case "TpexT43":
+		return "三大法人買賣超股數合計" == strings.Replace(data[23], " ", "", -1) &&
+			"自營商-買賣超股數" == strings.Replace(data[22], " ", "", -1) &&
+			"自營商-賣出股數" == strings.Replace(data[21], " ", "", -1) &&
+			"自營商-買進股數" == strings.Replace(data[20], " ", "", -1) &&
+			"名稱" == strings.Replace(data[1], " ", "", -1) &&
+			"代號" == strings.Replace(data[0], " ", "", -1)
+	case "TpexT44":
+		return "三大法人買賣超股數合計" == strings.Replace(data[23], " ", "", -1) &&
+			"投信-買賣超股數" == strings.Replace(data[13], " ", "", -1) &&
+			"投信-賣出股數" == strings.Replace(data[12], " ", "", -1) &&
+			"投信-買進股數" == strings.Replace(data[11], " ", "", -1) &&
+			"名稱" == strings.Replace(data[1], " ", "", -1) &&
+			"代號" == strings.Replace(data[0], " ", "", -1)
 	default:
 		return true
 	}
 }
 
+//台灣櫃買中心
+
+//Get 從網頁抓取 外資 資料
+func (t *TPEXT38U) Get() (map[string]BaseBuySellTotalData, error) {
+	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
+	//檢查map快取裡面有沒有資料
+	if v, ok := t.UnixData[dateUnix]; ok {
+		return v, nil
+	}
+	var (
+		csvdata   [][]string
+		data      []byte
+		err       error
+		resultMap map[string]BaseBuySellTotalData
+	)
+	utils.Dbgln(t.URL())
+	if data, err = hCache.Get(t.URL(), false); err != nil {
+		return nil, err
+	}
+	var csvArrayContent = strings.Split(string(data), "\n")
+	if len(csvArrayContent) < 3 {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, err
+		}
+		return nil, errorFileNoData
+	}
+	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
+	csvArrayContent = csvArrayContent[1:]
+
+	for i, v := range csvArrayContent {
+		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+	}
+
+	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+		resultMap = make(map[string]BaseBuySellTotalData, len(csvdata))
+		for i, v := range csvdata {
+			if i == 0 {
+				if false == checkCsvDataFormat("TpexT38", v) {
+					return nil, errors.New("Wrong TpexT38 Csv Data Format")
+				}
+				continue
+			}
+			var r BaseBuySellTotalData
+			no := strings.Replace(v[0], " ", "", -1)
+
+			r.Name = strings.Replace(v[1], " ", "", -1)
+
+			r.Volume.Buy, _ = strconv.ParseInt(strings.Replace(v[8], ",", "", -1), 10, 64)
+			r.Volume.Sell, _ = strconv.ParseInt(strings.Replace(v[9], ",", "", -1), 10, 64)
+			r.Volume.Total, _ = strconv.ParseInt(strings.Replace(v[10], ",", "", -1), 10, 64)
+
+			resultMap[no] = r
+
+		}
+		t.UnixData[dateUnix] = resultMap
+	}
+	return resultMap, err
+}
+
+//Get 從網頁抓取 外資 資料
+func (t *TPEXT44U) Get() (map[string]BaseBuySellTotalData, error) {
+	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
+	//檢查map快取裡面有沒有資料
+	if v, ok := t.UnixData[dateUnix]; ok {
+		return v, nil
+	}
+	var (
+		csvdata   [][]string
+		data      []byte
+		err       error
+		resultMap map[string]BaseBuySellTotalData
+	)
+	utils.Dbgln(t.URL())
+	if data, err = hCache.Get(t.URL(), false); err != nil {
+		return nil, err
+	}
+	var csvArrayContent = strings.Split(string(data), "\n")
+	if len(csvArrayContent) < 3 {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, err
+		}
+		return nil, errorFileNoData
+	}
+	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
+	csvArrayContent = csvArrayContent[1:]
+
+	for i, v := range csvArrayContent {
+		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+	}
+
+	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+		resultMap = make(map[string]BaseBuySellTotalData, len(csvdata))
+		for i, v := range csvdata {
+			if i == 0 {
+				if false == checkCsvDataFormat("TpexT44", v) {
+					return nil, errors.New("Wrong TpexT44 Csv Data Format")
+				}
+				continue
+			}
+			var r BaseBuySellTotalData
+			no := strings.Replace(v[0], " ", "", -1)
+
+			r.Name = strings.Replace(v[1], " ", "", -1)
+
+			r.Volume.Buy, _ = strconv.ParseInt(strings.Replace(v[11], ",", "", -1), 10, 64)
+			r.Volume.Sell, _ = strconv.ParseInt(strings.Replace(v[12], ",", "", -1), 10, 64)
+			r.Volume.Total, _ = strconv.ParseInt(strings.Replace(v[13], ",", "", -1), 10, 64)
+
+			resultMap[no] = r
+
+		}
+		t.UnixData[dateUnix] = resultMap
+	}
+	return resultMap, err
+}
+
+//台灣證交所
+
+//Get 從網頁抓取 外資 資料
 func (t *TWT38U) Get() (map[string]BaseT38U, error) {
 	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
 	if v, ok := t.UnixMapT38UData[dateUnix]; ok {
