@@ -22,7 +22,6 @@ package cmd
 
 import (
 	"crypto/md5"
-	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
@@ -56,6 +55,9 @@ var (
 	T38U *twse.TWT38U
 	T44U *twse.TWT44U
 	MTSS *twse.TWMTSS
+
+	TpexFI *twse.TPEXT38U
+	TpexIT *twse.TPEXT44U
 )
 
 //OTCCLASS OTCCLASS
@@ -324,7 +326,19 @@ var getTPEXCmd = &cobra.Command{
 	Long:  `Get All Stock of TPEX`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		getOTC("EW", *minDataNum)
+
+		date, _ := time.Parse(shortForm, *useDate)
+		if TpexFI == nil {
+			TpexFI = twse.NewTPEXT38U(date)
+		}
+		if TpexIT == nil {
+			TpexIT = twse.NewTPEXT44U(date)
+		}
+
+		if err := getOTC(date, "EW", *minDataNum, TpexFI, TpexIT); err != nil {
+			utils.Dbgln(err)
+		}
+
 	},
 }
 var getT38Cmd = &cobra.Command{
@@ -375,14 +389,14 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 	t := twse.NewLists(date)
 	tList := t.GetCategoryList(category)
 
-	year, month, day := date.Date()
+	/*year, month, day := date.Date()
 	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_CREATE|os.O_RDWR, 0666)
 	defer csvFile.Close()
 	if err != nil {
 		utils.Dbg("error: %s\n", err)
 		return err
 	}
-	csvWriter := csv.NewWriter(csvFile)
+	csvWriter := csv.NewWriter(csvFile)*/
 
 	mtssMapData, err := mtss.GetData()
 	if err != nil {
@@ -437,7 +451,7 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 					}
 				}
 				if output {
-					err = csvWriter.Write([]string{v.No,
+					/*err = csvWriter.Write([]string{v.No,
 						v.Name,
 						fmt.Sprintf("%.2f", res.todayRange),
 						fmt.Sprintf("%.2f", res.todayPrice),
@@ -454,7 +468,7 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 					err = csvWriter.Error()
 					if err != nil {
 						return err
-					}
+					}*/
 					fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t(%v) T44OverBought:%t(%v) MTSSOverBought:%t\n",
 						v.No,
 						res.todayRange,
@@ -478,48 +492,89 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 
 }
 
-func getOTC(category string, minDataNum int) error {
-	RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
-	otc := twse.NewOTCLists(RecentlyOpendtoday)
+func getOTC(date time.Time, category string, minDataNum int, t38 *twse.TPEXT38U, t44 *twse.TPEXT44U) error {
+	utils.Dbgln(date.Format(shortForm))
+	otc := twse.NewOTCLists(date)
 
 	oList := otc.GetCategoryList(category)
 
-	/*year, month, day := RecentlyOpendtoday.Date()
-
-	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-	defer csvFile.Close()
+	/*year, month, day := date.Date()
+	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		utils.Dbg("error: %s\n", err)
 		return err
 	}
+	defer csvFile.Close()
 	csvWriter := csv.NewWriter(csvFile)*/
 
 	for _, v := range oList {
-		stock := twse.NewOTC(v.No, RecentlyOpendtoday)
+		stock := twse.NewOTC(v.No, date)
 		if err := prepareStock(stock, minDataNum); err == nil {
+
+			output := true
+			isT38OverBought, t38Increase, t38ValList := t38.IsOverBoughtDates(v.No, fiNetBuyDay)
+			isT44OverBought, t44Increase, t44ValList := t44.IsOverBoughtDates(v.No, itNetBuyDay)
 			if res, err := showStock(stock, minDataNum); err == nil {
-				/*err = csvWriter.Write([]string{v.No,
-					fmt.Sprintf("%.2f", res.todayRange),
-					fmt.Sprintf("%.2f", res.todayPrice),
-					fmt.Sprintf("%.2f", res.todayGain),
-					fmt.Sprintf("%.2f", res.NDayAvg),
-					fmt.Sprintf("%t", res.overMA)})
-				if err != nil {
-					return err
+				if *useCp {
+					if res.todayGain >= 3.5 {
+						output = true
+					} else {
+						output = false
+					}
 				}
-				csvWriter.Flush()
-				err = csvWriter.Error()
-				if err != nil {
-					return err
-				}*/
-				fmt.Printf("No: %6s Range: %.2f Price: %.2f Gain: %.2f%% NDayAvg:%.2f overMA:%t\n",
-					v.No,
-					res.todayRange,
-					res.todayPrice,
-					res.todayGain,
-					res.NDayAvg,
-					res.overMA,
-				)
+				if *useMa {
+					if !res.overMA {
+						output = false
+					}
+				}
+				if *useT38 {
+					if !isT38OverBought {
+						output = false
+					}
+				}
+				if *useT44 {
+					if !isT44OverBought {
+						output = false
+					}
+				}
+				if fiIncrementalBuy {
+					if !t38Increase {
+						output = false
+					}
+				}
+				if itIncrementalBuy {
+					if !t44Increase {
+						output = false
+					}
+				}
+				if output {
+
+					/*err = csvWriter.Write([]string{v.No,
+						fmt.Sprintf("%.2f", res.todayRange),
+						fmt.Sprintf("%.2f", res.todayPrice),
+						fmt.Sprintf("%.2f", res.todayGain),
+						fmt.Sprintf("%.2f", res.NDayAvg),
+						fmt.Sprintf("%t", res.overMA)})
+					if err != nil {
+						return err
+					}
+					csvWriter.Flush()
+					err = csvWriter.Error()
+					if err != nil {
+						return err
+					}*/
+					fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t(%v) T44OverBought:%t(%v)\n",
+						v.No,
+						res.todayRange,
+						res.todayPrice,
+						res.todayGain,
+						res.NDayAvg,
+						res.overMA,
+						isT38OverBought,
+						t38ValList,
+						isT44OverBought,
+						t44ValList)
+				}
 			}
 		} else {
 			fmt.Println(err)

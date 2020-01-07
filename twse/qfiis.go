@@ -257,6 +257,22 @@ func (t *TWMTSS) SetDate(date time.Time) *TWMTSS {
 	t.Date = date
 	return t
 }
+
+//台灣櫃買中心
+func (t *TPEXT38U) SetDate(date time.Time) *TPEXT38U {
+	t.Date = date
+	return t
+}
+func (t *TPEXT43U) SetDate(date time.Time) *TPEXT43U {
+	t.Date = date
+	return t
+}
+func (t *TPEXT44U) SetDate(date time.Time) *TPEXT44U {
+	t.Date = date
+	return t
+}
+
+//台灣證交所
 func (t *TWT38U) SetDate(date time.Time) *TWT38U {
 	t.Date = date
 	return t
@@ -364,15 +380,46 @@ func (t *TWMTSS) GetData() (map[string]BaseMTSS, error) {
 	}
 }
 
+func (t *TPEXT38U) GetData() (map[string]BaseBuySellTotalData, error) {
+	if v, err := t.Get(); err == nil {
+		return v, err
+	}
+	t.Round()
+	/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+	return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+	return t.GetData()
+
+}
+
+func (t *TPEXT43U) GetData() (map[string]BaseBuySellTotalData, error) {
+	if v, err := t.Get(); err == nil {
+		return v, err
+	}
+	t.Round()
+	/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+	return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+	return t.GetData()
+
+}
+
+func (t *TPEXT44U) GetData() (map[string]BaseBuySellTotalData, error) {
+	if v, err := t.Get(); err == nil {
+		return v, err
+	}
+	t.Round()
+	/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+	return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+	return t.GetData()
+}
+
 func (t *TWT38U) GetData() (map[string]BaseT38U, error) {
 	if v, err := t.Get(); err == nil {
 		return v, err
-	} else {
-		t.Round()
-		/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
-		return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
-		return t.GetData()
 	}
+	t.Round()
+	/*if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+	return nil, errors.Wrap(err, "TWMTSS Remove Cache File Fail")		}*/
+	return t.GetData()
 }
 
 func (t *TWT43U) GetData() (map[string]BaseT43U, error) {
@@ -395,6 +442,139 @@ func (t *TWT44U) GetData() (map[string]BaseT44U, error) {
 		return t.GetData()
 	}
 }
+
+//台灣櫃買中心
+func (t *TPEXT38U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int64) {
+	var (
+		overbought  int
+		getDays     int
+		increment   bool
+		onlyOneZero bool = true
+	)
+	if days < 0 {
+		return false, false, nil
+	}
+	data := make([]int64, days)
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday := t.Date
+	bkDate := t.Date
+	//從最近的天數開始抓取 days 天的 資料 到 前(10+days)天 如果沒有抓到 days 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
+		if v, err := t.GetData(); err == nil {
+			getDays++
+			if onlyOneZero || v[stockNo].Volume.Total > 0 {
+				if v[stockNo].Volume.Total <= 0 {
+					onlyOneZero = false
+				}
+				data[overbought] = v[stockNo].Volume.Total
+				overbought++
+			}
+		}
+	}
+	t.SetDate(bkDate)
+	if getDays == days {
+		for i := 1; i < len(data); i++ {
+			if data[i-1] >= data[i] {
+				increment = true
+			} else {
+				increment = false
+				break
+			}
+		}
+		return overbought == days, increment, data
+	}
+	return false, false, nil
+
+}
+
+func (t *TPEXT43U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int64) {
+	var (
+		overbought  int
+		getDays     int
+		increment   bool
+		onlyOneZero bool = true
+	)
+	if days < 0 {
+		return false, false, nil
+	}
+	data := make([]int64, days)
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday := t.Date
+	bkDate := t.Date
+	//從最近的天數開始抓取 days 天的 資料 到 前(10+days)天 如果沒有抓到 days 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
+		if v, err := t.GetData(); err == nil {
+			getDays++
+			if onlyOneZero || v[stockNo].Volume.Total > 0 {
+				if v[stockNo].Volume.Total <= 0 {
+					onlyOneZero = false
+				}
+				data[overbought] = v[stockNo].Volume.Total
+				overbought++
+			}
+		}
+	}
+	t.SetDate(bkDate)
+	if getDays == days {
+		for i := 1; i < len(data); i++ {
+			if data[i-1] >= data[i] {
+				increment = true
+			} else {
+				increment = false
+				break
+			}
+		}
+		return overbought == days, increment, data
+	}
+	return false, false, nil
+
+}
+
+func (t *TPEXT44U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int64) {
+	var (
+		overbought  int
+		getDays     int
+		increment   bool
+		onlyOneZero bool = true
+	)
+	if days < 0 {
+		return false, false, nil
+	}
+	data := make([]int64, days)
+	//RecentlyOpendtoday := tradingdays.FindRecentlyOpened(time.Now())
+	RecentlyOpendtoday := t.Date
+	bkDate := t.Date
+	//從最近的天數開始抓取 days 天的 資料 到 前(10+days)天 如果沒有抓到 days 天資料則錯誤
+	for ; RecentlyOpendtoday.AddDate(0, 0, -10-days).Before(t.Date) && getDays < days; t.Round() {
+		if v, err := t.GetData(); err == nil {
+			getDays++
+			if onlyOneZero || v[stockNo].Volume.Total > 0 {
+				if v[stockNo].Volume.Total <= 0 {
+					onlyOneZero = false
+				}
+				data[overbought] = v[stockNo].Volume.Total
+				overbought++
+			}
+		}
+	}
+	t.SetDate(bkDate)
+	if getDays == days {
+		for i := 1; i < len(data); i++ {
+			if data[i-1] >= data[i] {
+				increment = true
+			} else {
+				increment = false
+				break
+			}
+		}
+		return overbought == days, increment, data
+	}
+	return false, false, nil
+
+}
+
+//台灣證交所
+
 func (t *TWT38U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int64) {
 	var (
 		overbought  int
@@ -433,10 +613,11 @@ func (t *TWT38U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int6
 			}
 		}
 		return overbought == days, increment, data
-	} else {
-		return false, false, nil
 	}
+	return false, false, nil
+
 }
+
 func (t *TWT43U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	var (
 		overbought int
@@ -460,9 +641,9 @@ func (t *TWT43U) IsOverBoughtDates(stockNo string, days int) (bool, []int64) {
 	t.SetDate(bkDate)
 	if getDays == days {
 		return overbought == days, data
-	} else {
-		return false, nil
 	}
+	return false, nil
+
 }
 func (t *TWT44U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int64) {
 	var (
@@ -501,9 +682,9 @@ func (t *TWT44U) IsOverBoughtDates(stockNo string, days int) (bool, bool, []int6
 			}
 		}
 		return overbought == days, increment, data
-	} else {
-		return false, false, nil
 	}
+	return false, false, nil
+
 }
 
 // TWTXXU 產生 自營商、投信、外資及陸資買賣超彙總表
@@ -732,7 +913,64 @@ func (t *TPEXT38U) Get() (map[string]BaseBuySellTotalData, error) {
 	return resultMap, err
 }
 
-//Get 從網頁抓取 外資 資料
+//Get 從網頁抓取 投信 資料
+func (t *TPEXT43U) Get() (map[string]BaseBuySellTotalData, error) {
+	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
+	//檢查map快取裡面有沒有資料
+	if v, ok := t.UnixData[dateUnix]; ok {
+		return v, nil
+	}
+	var (
+		csvdata   [][]string
+		data      []byte
+		err       error
+		resultMap map[string]BaseBuySellTotalData
+	)
+	utils.Dbgln(t.URL())
+	if data, err = hCache.Get(t.URL(), false); err != nil {
+		return nil, err
+	}
+	var csvArrayContent = strings.Split(string(data), "\n")
+	if len(csvArrayContent) < 3 {
+		if err := os.Remove(utils.GetMD5FilePath(t)); err != nil {
+			return nil, err
+		}
+		return nil, errorFileNoData
+	}
+	//從第八列開始 然後刪掉最後面的八行(注意可能會有空白的行)
+	csvArrayContent = csvArrayContent[1:]
+
+	for i, v := range csvArrayContent {
+		csvArrayContent[i] = strings.Replace(v, "=", "", -1)
+	}
+
+	if csvdata, err = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent, "\n"))).ReadAll(); err == nil {
+		resultMap = make(map[string]BaseBuySellTotalData, len(csvdata))
+		for i, v := range csvdata {
+			if i == 0 {
+				if false == checkCsvDataFormat("TpexT43", v) {
+					return nil, errors.New("Wrong TpexT43 Csv Data Format")
+				}
+				continue
+			}
+			var r BaseBuySellTotalData
+			no := strings.Replace(v[0], " ", "", -1)
+
+			r.Name = strings.Replace(v[1], " ", "", -1)
+
+			r.Volume.Buy, _ = strconv.ParseInt(strings.Replace(v[20], ",", "", -1), 10, 64)
+			r.Volume.Sell, _ = strconv.ParseInt(strings.Replace(v[21], ",", "", -1), 10, 64)
+			r.Volume.Total, _ = strconv.ParseInt(strings.Replace(v[22], ",", "", -1), 10, 64)
+
+			resultMap[no] = r
+
+		}
+		t.UnixData[dateUnix] = resultMap
+	}
+	return resultMap, err
+}
+
+//Get 從網頁抓取 投信 資料
 func (t *TPEXT44U) Get() (map[string]BaseBuySellTotalData, error) {
 	dateUnix := time.Date(t.Date.Year(), t.Date.Month(), t.Date.Day(), 0, 0, 0, 0, t.Date.Location()).Unix()
 	//檢查map快取裡面有沒有資料
