@@ -71,7 +71,7 @@ func (d Data) URL() string {
 	case "otc":
 		return fmt.Sprintf("%s%s",
 			utils.OTCHOST,
-			fmt.Sprintf(utils.OTCCSV, d.Date.Year()-1911, d.Date.Month(), d.No))
+			fmt.Sprintf(utils.OTCCSV, d.Date.Year()-1911, d.Date.Month(), d.No, d.Date.Day()))
 	}
 
 	return ""
@@ -80,7 +80,7 @@ func (d Data) URL() string {
 // Round will do sub one month.
 func (d *Data) Round() {
 	year, month, _ := d.Date.Date()
-	d.Date = time.Date(year, month-1, 1, 0, 0, 0, 0, d.Date.Location())
+	d.Date = time.Date(year, month, 1, 0, 0, 0, 0, d.Date.Location()).AddDate(0, 0, -1)
 }
 
 // PlusData will do Round() and Get().
@@ -109,12 +109,12 @@ func (d *Data) Get() ([][]string, error) {
 		d.Date.Month() == tradingdays.FindRecentlyOpened(time.Now()).Month() {
 		var data []byte
 		var err error
-		//fmt.Println("stock url:", d.URL())
+		//utils.Dbgln("stock url:", d.URL())
 		switch d.exchange {
 		case "tse":
 			data, err = hCache.PostForm(d.URL(), nil)
 		case "otc":
-			data, err = hCache.Get(d.URL(), true)
+			data, err = hCache.Get(d.URL(), false)
 		}
 		if err != nil {
 			return nil, fmt.Errorf(errorNetworkFail.Error(), err)

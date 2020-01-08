@@ -126,8 +126,7 @@ func (hc HTTPCache) Get(url string, rand bool) ([]byte, error) {
 		content []byte
 		err     error
 	)
-
-	//fmt.Printf("file:%s%s/%s\n", GetOSRamdiskPath(""), TempFolderName, filehash)
+	//Dbg("file:%s%s/%s\nurl:%s\n", GetOSRamdiskPath(""), TempFolderName, filehash, url)
 	if content, err = hc.readFile(filehash); err != nil {
 		checkAndSyncVisitTime(whereUrl(url))
 		return hc.saveFile(url, filehash, rand, nil)
@@ -208,25 +207,19 @@ func (hc HTTPCache) saveFile(url, filehash string, rand bool, data url.Values) (
 		err     error
 		f       *os.File
 		out     []byte
-		req     *http.Request
 		resp    *http.Response
 	)
 
 	if len(data) == 0 {
 		// http.Get
-		req, err = http.NewRequest("GET", url, nil)
+		resp, err = http.Get(url)
 	} else {
 		// http.PostForm
-		req, err = http.NewRequest("POST", url, strings.NewReader(data.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		resp, err = http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	}
 
 	if err != nil {
-		return out, err
-	}
-
-	req.Header.Set("Connection", "close")
-	if resp, err = HTTPClient.Do(req); err != nil {
 		return out, err
 	}
 	defer resp.Body.Close()

@@ -21,11 +21,12 @@ var TaipeiTimeZone = time.FixedZone("Asia/Taipei", 8*3600)
 
 // TWSE base url.
 const (
-	TWSEURL      string = "http://mis.twse.com.tw"
-	TWSEHOST     string = "http://www.twse.com.tw"
-	OTCHOST      string = "http://www.tpex.org.tw"
-	HOME         string = "/stock/index.jsp"
-	OTCCSV       string = "/ch/stock/aftertrading/daily_trading_info/st43_download.php?d=%d/%02d&stkno=%s&r=%%d"           // year, mon, stock, rand
+	TWSEURL  string = "http://mis.twse.com.tw"
+	TWSEHOST string = "http://www.twse.com.tw"
+	OTCHOST  string = "https://www.tpex.org.tw"
+	HOME     string = "/stock/index.jsp"
+	OTCCSV   string = "/web/stock/aftertrading/daily_trading_info/st43_download.php?l=zh-tw&d=%d/%02d&stkno=%s&r=%d" // year, mon, stock, rand
+	//https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_download.php?l=zh-tw&d=109/01&stkno=3105&r=0
 	OTCLISTCSV   string = "/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_download.php?l=zh-tw&d=%s&se=%s&s=0,asc,0" // date, cate
 	OTC3instiCSV string = "/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=csv&se=EW&t=D&d=%s&s=0,asc"    // date, cate
 	///web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=csv&se=EW&t=D&d=109/01/03&s=0,asc
