@@ -81,14 +81,17 @@ func (d Data) URL() string {
 func (d *Data) Round() {
 	year, month, _ := d.Date.Date()
 	d.Date = time.Date(year, month, 1, 0, 0, 0, 0, d.Date.Location()).AddDate(0, 0, -1)
+	//d.Date = time.Date(year, month-1, 1, 0, 0, 0, 0, d.Date.Location())
 }
 
 // PlusData will do Round() and Get().
-func (d *Data) PlusData() {
+func (d *Data) PlusData() error {
 	d.Round()
 	if _, err := d.Get(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		return err
 	}
+	return nil
 }
 
 func (d *Data) clearCache() {
@@ -124,7 +127,7 @@ func (d *Data) Get() ([][]string, error) {
 			csvArrayContent[i] = strings.TrimSpace(csvArrayContent[i])
 		}
 		var csvReader *csv.Reader
-
+		var cutColNum int
 		if (d.exchange == "tse" && len(csvArrayContent) > 2) || (d.exchange == "otc" && len(csvArrayContent) > 5) {
 			if d.exchange == "tse" {
 				var regdate = regexp.MustCompile(`^\"[0-9/]{7,}`)
@@ -148,9 +151,23 @@ func (d *Data) Get() ([][]string, error) {
 				if d.Name == "" {
 					d.Name = strings.Split(csvArrayContent[2], ":")[1]
 				}
-				csvReader = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent[5:len(csvArrayContent)-1], "\n")))
+				//csvArrayContent[5] = strings.Replace(csvArrayContent[5], "＊", "", -1)
+
+				for cutColNum = 1; cutColNum < len(csvArrayContent); cutColNum++ {
+
+					s := csvArrayContent[len(csvArrayContent)-cutColNum]
+					if strings.HasPrefix(s, "共") && strings.HasSuffix(s, "筆") {
+						break
+					}
+				}
+
+				csvReader = csv.NewReader(strings.NewReader(strings.Join(csvArrayContent[5:len(csvArrayContent)-cutColNum], "\n")))
 			}
 			allData, err := csvReader.ReadAll()
+			if err != nil {
+				utils.Dbgln(csvArrayContent[len(csvArrayContent)-cutColNum])
+				return nil, errors.WithMessagef(err, "[%s]%s %s\n", d.No, utils.GetMD5FilePath(d), d.URL())
+			}
 			pickData := make([][]string, 0)
 
 			for _, v := range allData {
