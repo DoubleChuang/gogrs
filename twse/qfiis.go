@@ -869,7 +869,7 @@ func (t *TPEXT38U) Get() (map[string]BaseBuySellTotalData, error) {
 		err       error
 		resultMap map[string]BaseBuySellTotalData
 	)
-	utils.Dbgln(t.URL())
+	//utils.Dbgln(t.URL())
 	if data, err = hCache.Get(t.URL(), false); err != nil {
 		return nil, err
 	}
@@ -983,7 +983,7 @@ func (t *TPEXT44U) Get() (map[string]BaseBuySellTotalData, error) {
 		err       error
 		resultMap map[string]BaseBuySellTotalData
 	)
-	utils.Dbgln(t.URL())
+	//utils.Dbgln(t.URL())
 	if data, err = hCache.Get(t.URL(), false); err != nil {
 		return nil, err
 	}
