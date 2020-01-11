@@ -304,6 +304,11 @@ var getTWSECmd = &cobra.Command{
 	Long:  `Get All Stock of TWSE`,
 	Run: func(cmd *cobra.Command, args []string) {
 		date, _ := time.Parse(shortForm, *useDate)
+
+		if !tradingdays.IsOpen(date.Year(), date.Month(), date.Day()) {
+			date = tradingdays.FindRecentlyOpened(date)
+			utils.Dbgln("Change the date to", date)
+		}
 		if T38U == nil {
 			T38U = twse.NewTWT38U(date)
 		}
@@ -328,6 +333,11 @@ var getTPEXCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		date, _ := time.Parse(shortForm, *useDate)
+
+		if !tradingdays.IsOpen(date.Year(), date.Month(), date.Day()) {
+			date = tradingdays.FindRecentlyOpened(date)
+			utils.Dbgln("Change the date to", date)
+		}
 		if TpexFI == nil {
 			TpexFI = twse.NewTPEXT38U(date)
 		}
@@ -492,11 +502,34 @@ func getTWSE(date time.Time, category string, minDataNum int, t38 *twse.TWT38U, 
 
 }
 
+func getShouldEnoughDataStock(minDataNum int, date time.Time, category string) []string {
+	m := map[string]int{}
+	var ret []string
+
+	for i := 0; i < minDataNum; i++ {
+		otc := twse.NewOTCLists(date)
+		oList := otc.GetCategoryList(category)
+		for _, v := range oList {
+			m[v.No]++
+		}
+
+		date = tradingdays.FindRecentlyOpened(date.AddDate(0, 0, -1))
+	}
+	for k, v := range m {
+		if v == minDataNum {
+			ret = append(ret, k)
+		}
+	}
+	return ret
+}
+
 func getOTC(date time.Time, category string, minDataNum int, t38 *twse.TPEXT38U, t44 *twse.TPEXT44U) error {
 	utils.Dbgln(date.Format(shortForm))
-	otc := twse.NewOTCLists(date)
+	//otc := twse.NewOTCLists(date)
 
-	oList := otc.GetCategoryList(category)
+	//oList := otc.GetCategoryList(category)
+
+	stockList := getShouldEnoughDataStock(minDataNum, date, category)
 
 	/*year, month, day := date.Date()
 	csvFile, err := os.OpenFile(fmt.Sprintf("%d%02d%02d.csv", year, month, day), os.O_CREATE|os.O_RDWR, 0666)
@@ -507,13 +540,13 @@ func getOTC(date time.Time, category string, minDataNum int, t38 *twse.TPEXT38U,
 	defer csvFile.Close()
 	csvWriter := csv.NewWriter(csvFile)*/
 
-	for _, v := range oList {
-		stock := twse.NewOTC(v.No, date)
+	for _, v := range stockList {
+		stock := twse.NewOTC(v, date)
 		if err := prepareStock(stock, minDataNum); err == nil {
 
 			output := true
-			isT38OverBought, t38Increase, t38ValList := t38.IsOverBoughtDates(v.No, fiNetBuyDay)
-			isT44OverBought, t44Increase, t44ValList := t44.IsOverBoughtDates(v.No, itNetBuyDay)
+			isT38OverBought, t38Increase, t38ValList := t38.IsOverBoughtDates(v, fiNetBuyDay)
+			isT44OverBought, t44Increase, t44ValList := t44.IsOverBoughtDates(v, itNetBuyDay)
 			if res, err := showStock(stock, minDataNum); err == nil {
 				if *useCp {
 					if res.todayGain >= 3.5 {
@@ -564,7 +597,7 @@ func getOTC(date time.Time, category string, minDataNum int, t38 *twse.TPEXT38U,
 						return err
 					}*/
 					fmt.Printf("No:%6s Range: %6.2f Price: %6.2f Gain: %6.2f%% NDayAvg:%6.2f overMA:%t T38OverBought:%t(%v) T44OverBought:%t(%v)\n",
-						v.No,
+						v,
 						res.todayRange,
 						res.todayPrice,
 						res.todayGain,
@@ -602,11 +635,14 @@ func prepareStock(stock *twse.Data, mindata int) error {
 	if _, err := stock.Get(); err != nil {
 		return err
 	}
-	//utils.Dbgln("stock len:", stock.Len())
+
 	if stock.Len() < mindata {
 		start := stock.Len()
 		for {
-			stock.PlusData()
+			err := stock.PlusData()
+			if err != nil {
+				utils.Dbgln(err.Error())
+			}
 			if stock.Len() > mindata {
 				break
 			}
@@ -615,8 +651,10 @@ func prepareStock(stock *twse.Data, mindata int) error {
 			}
 			start = stock.Len()
 		}
+
 		if stock.Len() < mindata {
-			return errors.New("Can't prepare enough data please check file has data or remove cache file")
+			return errors.Errorf("[%s]%s %s Can't prepare enough data please check file has data or remove cache file\n", stock.No, utils.GetMD5FilePath(stock), stock.URL())
+
 		}
 	}
 	return nil
